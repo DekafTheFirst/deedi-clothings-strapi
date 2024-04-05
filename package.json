@@ -20,6 +20,7 @@
     "react-dom": "^18.0.0",
     "react-router-dom": "5.3.4",
     "strapi-blurhash": "^1.1.1",
+    "strapi-blurhash-plugin": "^0.2.3",
     "stripe": "^14.23.0",
     "styled-components": "5.3.3"
   },
