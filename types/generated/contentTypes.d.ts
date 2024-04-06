@@ -815,6 +815,7 @@ export interface ApiCategoryCategory extends Schema.CollectionType {
       'api::sub-category.sub-category'
     >;
     slug: Attribute.UID<'api::category.category', 'title'>;
+    imgBlurred: Attribute.String;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;

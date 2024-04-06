@@ -44,6 +44,9 @@
     "slug": {
       "type": "uid",
       "targetField": "title"
+    },
+    "imgBlurred": {
+      "type": "string"
     }
   }
 }
