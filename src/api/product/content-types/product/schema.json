@@ -67,6 +67,12 @@
         "featured",
         "trending"
       ]
+    },
+    "imgBlurred": {
+      "type": "string"
+    },
+    "img2Blurred": {
+      "type": "string"
     }
   }
 }
