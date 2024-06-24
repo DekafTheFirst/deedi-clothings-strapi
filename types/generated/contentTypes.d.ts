@@ -423,7 +423,6 @@ export interface PluginUploadFile extends Schema.CollectionType {
       'admin::user'
     > &
       Attribute.Private;
-    placeholder: Attribute.Text;
   };
 }
 
