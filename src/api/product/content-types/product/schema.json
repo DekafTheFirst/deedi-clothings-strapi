@@ -73,6 +73,9 @@
     },
     "img2Blurred": {
       "type": "string"
+    },
+    "discountedPrice": {
+      "type": "decimal"
     }
   }
 }

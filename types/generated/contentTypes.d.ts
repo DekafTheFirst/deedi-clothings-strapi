@@ -896,6 +896,7 @@ export interface ApiProductProduct extends Schema.CollectionType {
     type: Attribute.Enumeration<['normal', 'featured', 'trending']>;
     imgBlurred: Attribute.String;
     img2Blurred: Attribute.String;
+    discountedPrice: Attribute.Decimal;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;
