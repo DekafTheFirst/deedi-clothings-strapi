@@ -16,9 +16,6 @@
       "type": "string",
       "required": true
     },
-    "desc": {
-      "type": "text"
-    },
     "img": {
       "type": "media",
       "multiple": true,
@@ -76,6 +73,16 @@
     },
     "discountedPrice": {
       "type": "decimal"
+    },
+    "availableSizes": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::size.size",
+      "inversedBy": "products"
+    },
+    "desc": {
+      "type": "blocks",
+      "required": true
     }
   }
 }
