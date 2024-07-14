@@ -12,10 +12,6 @@
   },
   "pluginOptions": {},
   "attributes": {
-    "shortForm": {
-      "type": "string",
-      "required": true
-    },
     "size": {
       "type": "string",
       "required": true

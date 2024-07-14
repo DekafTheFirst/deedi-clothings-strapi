@@ -788,6 +788,50 @@ export interface PluginUsersPermissionsUser extends Schema.CollectionType {
   };
 }
 
+export interface ApiBillingAddressBillingAddress extends Schema.CollectionType {
+  collectionName: 'billing_addresses';
+  info: {
+    singularName: 'billing-address';
+    pluralName: 'billing-addresses';
+    displayName: 'BillingAddress';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    firstName: Attribute.String & Attribute.Required;
+    lastName: Attribute.String & Attribute.Required;
+    email: Attribute.Email & Attribute.Required;
+    phoneNumber: Attribute.String & Attribute.Required;
+    addressLine1: Attribute.String & Attribute.Required;
+    addressLine2: Attribute.String;
+    city: Attribute.String & Attribute.Required;
+    postalCode: Attribute.String & Attribute.Required;
+    state: Attribute.String & Attribute.Required;
+    country: Attribute.String & Attribute.Required;
+    orders: Attribute.Relation<
+      'api::billing-address.billing-address',
+      'oneToMany',
+      'api::order.order'
+    >;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    publishedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::billing-address.billing-address',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      'api::billing-address.billing-address',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
 export interface ApiCategoryCategory extends Schema.CollectionType {
   collectionName: 'categories';
   info: {
@@ -833,12 +877,45 @@ export interface ApiCategoryCategory extends Schema.CollectionType {
   };
 }
 
+export interface ApiCourierCourier extends Schema.CollectionType {
+  collectionName: 'couriers';
+  info: {
+    singularName: 'courier';
+    pluralName: 'couriers';
+    displayName: 'Courier';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    name: Attribute.String & Attribute.Required;
+    serviceCode: Attribute.String & Attribute.Required;
+    cost: Attribute.Float;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    publishedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::courier.courier',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      'api::courier.courier',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
 export interface ApiOrderOrder extends Schema.CollectionType {
   collectionName: 'orders';
   info: {
     singularName: 'order';
     pluralName: 'orders';
     displayName: 'order';
+    description: '';
   };
   options: {
     draftAndPublish: true;
@@ -847,6 +924,19 @@ export interface ApiOrderOrder extends Schema.CollectionType {
     email: Attribute.String;
     stripeId: Attribute.Text;
     products: Attribute.JSON;
+    selectedCourier: Attribute.String;
+    status: Attribute.String;
+    totalAmount: Attribute.Float;
+    shipping_address: Attribute.Relation<
+      'api::order.order',
+      'manyToOne',
+      'api::shipping-address.shipping-address'
+    >;
+    billing_address: Attribute.Relation<
+      'api::order.order',
+      'manyToOne',
+      'api::billing-address.billing-address'
+    >;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;
@@ -920,6 +1010,51 @@ export interface ApiProductProduct extends Schema.CollectionType {
   };
 }
 
+export interface ApiShippingAddressShippingAddress
+  extends Schema.CollectionType {
+  collectionName: 'shipping_addresses';
+  info: {
+    singularName: 'shipping-address';
+    pluralName: 'shipping-addresses';
+    displayName: 'ShippingAddress';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    firstName: Attribute.String & Attribute.Required;
+    lastName: Attribute.String & Attribute.Required;
+    email: Attribute.Email & Attribute.Required;
+    phoneNumber: Attribute.String & Attribute.Required;
+    addressLine1: Attribute.String & Attribute.Required;
+    addressLine2: Attribute.String;
+    city: Attribute.String & Attribute.Required;
+    postalCode: Attribute.String & Attribute.Required;
+    state: Attribute.String & Attribute.Required;
+    country: Attribute.String & Attribute.Required;
+    orders: Attribute.Relation<
+      'api::shipping-address.shipping-address',
+      'oneToMany',
+      'api::order.order'
+    >;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    publishedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::shipping-address.shipping-address',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      'api::shipping-address.shipping-address',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
 export interface ApiSizeSize extends Schema.CollectionType {
   collectionName: 'sizes';
   info: {
@@ -932,7 +1067,6 @@ export interface ApiSizeSize extends Schema.CollectionType {
     draftAndPublish: true;
   };
   attributes: {
-    shortForm: Attribute.String & Attribute.Required;
     size: Attribute.String & Attribute.Required;
     products: Attribute.Relation<
       'api::size.size',
@@ -1008,9 +1142,12 @@ declare module '@strapi/types' {
       'plugin::users-permissions.permission': PluginUsersPermissionsPermission;
       'plugin::users-permissions.role': PluginUsersPermissionsRole;
       'plugin::users-permissions.user': PluginUsersPermissionsUser;
+      'api::billing-address.billing-address': ApiBillingAddressBillingAddress;
       'api::category.category': ApiCategoryCategory;
+      'api::courier.courier': ApiCourierCourier;
       'api::order.order': ApiOrderOrder;
       'api::product.product': ApiProductProduct;
+      'api::shipping-address.shipping-address': ApiShippingAddressShippingAddress;
       'api::size.size': ApiSizeSize;
       'api::sub-category.sub-category': ApiSubCategorySubCategory;
     }

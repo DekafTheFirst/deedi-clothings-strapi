@@ -4,7 +4,8 @@
   "info": {
     "singularName": "order",
     "pluralName": "orders",
-    "displayName": "order"
+    "displayName": "order",
+    "description": ""
   },
   "options": {
     "draftAndPublish": true
@@ -19,6 +20,27 @@
     },
     "products": {
       "type": "json"
+    },
+    "selectedCourier": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string"
+    },
+    "totalAmount": {
+      "type": "float"
+    },
+    "shipping_address": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::shipping-address.shipping-address",
+      "inversedBy": "orders"
+    },
+    "billing_address": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::billing-address.billing-address",
+      "inversedBy": "orders"
     }
   }
 }
