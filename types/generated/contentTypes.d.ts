@@ -877,38 +877,6 @@ export interface ApiCategoryCategory extends Schema.CollectionType {
   };
 }
 
-export interface ApiCourierCourier extends Schema.CollectionType {
-  collectionName: 'couriers';
-  info: {
-    singularName: 'courier';
-    pluralName: 'couriers';
-    displayName: 'Courier';
-  };
-  options: {
-    draftAndPublish: true;
-  };
-  attributes: {
-    name: Attribute.String & Attribute.Required;
-    serviceCode: Attribute.String & Attribute.Required;
-    cost: Attribute.Float;
-    createdAt: Attribute.DateTime;
-    updatedAt: Attribute.DateTime;
-    publishedAt: Attribute.DateTime;
-    createdBy: Attribute.Relation<
-      'api::courier.courier',
-      'oneToOne',
-      'admin::user'
-    > &
-      Attribute.Private;
-    updatedBy: Attribute.Relation<
-      'api::courier.courier',
-      'oneToOne',
-      'admin::user'
-    > &
-      Attribute.Private;
-  };
-}
-
 export interface ApiOrderOrder extends Schema.CollectionType {
   collectionName: 'orders';
   info: {
@@ -1148,7 +1116,6 @@ declare module '@strapi/types' {
       'plugin::users-permissions.user': PluginUsersPermissionsUser;
       'api::billing-address.billing-address': ApiBillingAddressBillingAddress;
       'api::category.category': ApiCategoryCategory;
-      'api::courier.courier': ApiCourierCourier;
       'api::order.order': ApiOrderOrder;
       'api::product.product': ApiProductProduct;
       'api::shipping-address.shipping-address': ApiShippingAddressShippingAddress;
