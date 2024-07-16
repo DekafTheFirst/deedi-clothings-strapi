@@ -1,11 +1,13 @@
-// path: ./src/services/easyship.js
+// In your Strapi controller (e.g., api/order/controllers/order.js)
 
 const axios = require('axios');
 
-const EASYSHIP_API_KEY = process.env.EASYSHIP_API_KEY;
-
 module.exports = {
-  getCouriers: async (address) => {
+  async getCouriers(ctx) {
+    const { address, items } = ctx.request.body;
+
+    const EASYSHIP_API_KEY = process.env.EASYSHIP_API_KEY;
+
     try {
       const options = {
         method: 'POST',
@@ -22,22 +24,27 @@ module.exports = {
           insurance: { is_insured: false },
           parcels: [
             {
-              items: address.items.map(item => ({
+              items: items.map(item => ({
                 quantity: item.quantity,
                 weight: item.weight,
-                dimensions: item.dimensions, // Assuming dimensions includes length, width, height
+                dimensions: {
+                  length: item.length,
+                  width: item.width,
+                  height: item.height,
+                },
               })),
             },
           ],
-          shipping_settings: { units: { dimensions: 'cm', weight: 'kg' } },
+          shipping_settings: { units: { dimensions: 'inches', weight: 'lb' } },
         },
       };
 
       const response = await axios.request(options);
-      return response.data;
+      ctx.send(response.data);
     } catch (error) {
+      
       console.error('Error fetching couriers', error);
-      throw error;
+      ctx.throw(500, 'Failed to fetch couriers');
     }
   },
 };

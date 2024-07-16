@@ -992,6 +992,10 @@ export interface ApiProductProduct extends Schema.CollectionType {
       'api::size.size'
     >;
     desc: Attribute.Blocks & Attribute.Required;
+    weight: Attribute.Decimal;
+    length: Attribute.Decimal;
+    width: Attribute.Decimal;
+    height: Attribute.Decimal;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;
