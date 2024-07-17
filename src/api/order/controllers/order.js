@@ -66,7 +66,6 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
 
     async getCouriers(ctx) {
         const { address, items } = ctx.request.body;
-        const EASYSHIP_API_KEY = process.env.EASYSHIP_API_KEY;
 
         try {
             const options = {
@@ -75,7 +74,7 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
                 headers: {
                     accept: 'application/json',
                     'content-type': 'application/json',
-                    Authorization: `Bearer ${EASYSHIP_API_KEY}`,
+                    authorization: 'Bearer prod_toOBr6Pu+gqsf9n52fUgtHWyD1rJ8kA+8n13ItLB2Nw='
 
                 },
                 data: {
@@ -83,35 +82,29 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
                     // destination_address: { country_alpha2: address.country, city: address.city, line_1: address.addressLine1, postal_code: address.postalCode, state: address.state },
 
                     destination_address: {
-                        city: 'Hong Kong',
+                        country_alpha2: 'US',
+                        city: 'New York',
                         company_name: null,
-                        contact_email: 'asd@asd.com',
-                        contact_name: 'Foo Bar',
+                        contact_email: 'info@onetradectr.com',
+                        contact_name: 'John Doe',
                         contact_phone: null,
-                        country_alpha2: 'HK',
-                        line_1: 'Kennedy Town',
-                        line_2: 'Block 3',
-                        postal_code: '0000'
+                        line_1: '285 Fulton St',
+                        postal_code: '10007',
+                        state: 'NY'
                     },
+
                     origin_address: {
-                        city: "New York",
-                        company_name: "Test Company",
-                        contact_email: "dekeji1@gmail.com",
-                        contact_name: "Test contact name",
-                        contact_phone: "0",
-                        country_alpha2: "US",
-                        default_for: {
-                            pickup: true,
-                            billing: false,
-                            sender: true,
-                            return: true
-                        },
-                        id: "66672e2b-13e5-4cde-9790-a78df7d66cba",
-                        line_1: "123 Test Road",
-                        line_2: null,
-                        postal_code: "10001",
-                        state: 'New York'
+                        city: 'Baltimore',
+                        company_name: null,
+                        contact_email: 'info@innerharbor.com',
+                        contact_name: 'Jane Smith',
+                        contact_phone: null,
+                        country_alpha2: 'US',
+                        line_1: '401 Light St',
+                        postal_code: '21202',
+                        state: 'MD'
                     },
+
                     incoterms: 'DDU',
                     insurance: { is_insured: false },
                     parcels: [
@@ -211,6 +204,7 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
             }
 
             console.log(response.data)
+            console.log(options)
             ctx.send({
                 status: response.status,
                 data: response.data,
