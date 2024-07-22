@@ -69,6 +69,8 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
         const EASYSHIP_API_KEY = process.env.EASYSHIP_API_KEY;
         console.log(EASYSHIP_API_KEY);
 
+        console.log(address)
+
         try {
             const options = {
                 method: 'POST',
@@ -80,26 +82,27 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
 
                 },
                 data: {
-                    courier_selection: { apply_shipping_rules: true, show_courier_logo_url: false },
-                    destination_address: {
-                        country_alpha2: address.country,
-                        city: address.city,
-                        line_1: address.addressLine1,
-                        postal_code: address.postalCode,
-                        state: address.state
-                    },
+                    courier_selection: { apply_shipping_rules: true, show_courier_logo_url: true },
 
                     // destination_address: {
-                    //     country_alpha2: 'US',
-                    //     city: 'New York',
-                    //     company_name: null,
-                    //     contact_email: 'info@onetradectr.com',
-                    //     contact_name: 'John Doe',
-                    //     contact_phone: null,
-                    //     line_1: '285 Fulton St',
-                    //     postal_code: '10007',
-                    //     state: 'NY'
+                    //     country_alpha2: address.country,
+                    //     city: address.city,
+                    //     line_1: address.addressLine1,
+                    //     postal_code: address.postalCode,
+                    //     state: address.state
                     // },
+
+                    destination_address: {
+                        country_alpha2: 'US',
+                        city: 'New York',
+                        company_name: null,
+                        contact_email: 'info@onetradectr.com',
+                        contact_name: 'John Doe',
+                        contact_phone: null,
+                        line_1: '285 Fulton St',
+                        postal_code: '10007',
+                        state: 'NY'
+                    },
 
                     origin_address: {
                         city: 'Baltimore',
