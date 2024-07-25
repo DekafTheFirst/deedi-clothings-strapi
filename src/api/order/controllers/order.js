@@ -13,56 +13,92 @@ const { createCoreController } = require('@strapi/strapi').factories;
 // @ts-ignore
 module.exports = createCoreController("api::order.order", ({ strapi }) => ({
     async create(ctx) {
-        // @ts-ignore
-        const { products } = ctx.request.body;
-        console.log("products", products)
-
-        const lineItems = await Promise.all(
-            products.map(async (product) => {
-                const item = await strapi
-                    .service("api::product.product")
-                    .findOne(product.id);
-                console.log('item', item)
-
-                return {
-                    price_data: {
-                        currency: "usd",
-                        product_data: {
-                            name: item.title,
-                        },
-                        unit_amount: Math.round(item.price * 100),
-                    },
-                    quantity: product.quantity,
-                };
-            })
-        );
-
+        const { items, shippingInfo, billingInfo } = ctx.request.body;
+        console.log('items', items[0])
         try {
-            console.log('lineItems', lineItems)
-            const session = await stripe.checkout.sessions.create({
-                mode: "payment",
-                success_url: `${process.env.CLIENT_URL}?success=true`,
-                cancel_url: `${process.env.CLIENT_URL}?success=false`,
+            // Generate line items for Stripe Payment Link
+            const lineItems = await Promise.all(
+                items.map(async (item) => {
+                    const product = await strapi.service('api::product.product').findOne(item.productId);
+
+                    return {
+                        price: product.stripePriceId,
+                        quantity: item.quantity,
+                    };
+                })
+            );
+
+            // Create a Payment Link
+            const paymentLink = await stripe.paymentLinks.create({
                 line_items: lineItems,
-                shipping_address_collection: { allowed_countries: ["US", "CA"] },
-                payment_method_types: ["card"],
+                // You can configure additional settings here if needed
             });
 
-            await strapi
-                .service("api::order.order")
-                .create({
-                    data: {
-                        products,
-                        stripeId: session.id,
-                    }
-                })
+            // Optionally, you might want to save order details to the database
+            await strapi.service('api::order.order').create({
+                data: {
+                    items,
+                    stripeId: paymentLink.id,
+                    // Add other necessary order details here
+                },
+            });
 
-            return { stripeSession: session }
-        } catch (err) {
-            ctx.response.status = 500;
-            return err;
+            ctx.send({ url: paymentLink.url });
+        } catch (error) {
+            console.error('Payment Link creation failed:', error);
+            ctx.throw(400, 'Payment Link creation failed');
         }
+
+        // const { products, shippingInfo, billingInfo } = ctx.request.body;
+        // // console.log(products[0])
+
+        // try {
+        //     const lineItems = await Promise.all(
+        //         products.map(async (product) => {
+        //             const item = await strapi.service('api::product.product').findOne(product.productId);
+
+        //             return {
+        //                 price_data: {
+        //                     currency: 'usd',
+        //                     product_data: {
+        //                         name: item.title,
+        //                     },
+        //                     unit_amount: Math.round(item.price * 100),
+        //                 },
+        //                 quantity: product.quantity,
+        //             };
+        //         })
+        //     );
+
+        //     const session = await stripe.checkout.sessions.create({
+        //         mode: 'payment',
+        //         success_url: `${process.env.CLIENT_URL}?success=true`,
+        //         cancel_url: `${process.env.CLIENT_URL}?success=false`,
+        //         line_items: lineItems,
+        //         shipping_address_collection: { allowed_countries: ['US', 'CA'] },
+        //         payment_method_types: ['card'],
+        //     });
+
+        //     await strapi.service('api::order.order').create({
+        //         data: {
+        //             products,
+        //             stripeId: session.id,
+        //             shippingInfo,
+        //             billingInfo,
+        //         },
+        //     });
+
+        //     return { stripeSession: session };
+        // } catch (err) {
+        //     console.log(err)
+        //     ctx.response.status = 500;
+        //     return err;
+        // }
     },
+
+
+
+
 
     async getCouriers(ctx) {
         const { address, items } = ctx.request.body;
@@ -234,6 +270,46 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
         }
     },
 
+    // async createPaymentLink(ctx) {
 
+    // },
+
+
+    async handleStripeWebhook(ctx) {
+        const sig = ctx.request.headers['stripe-signature'];
+        const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+        let event;
+
+        try {
+            event = stripe.webhooks.constructEvent(ctx.request.body, sig, webhookSecret);
+        } catch (err) {
+            console.log(`Webhook error: ${err.message}`);
+            ctx.response.status = 400;
+            return { error: 'Webhook error: ' + err.message };
+        }
+
+        switch (event.type) {
+            case 'checkout.session.completed':
+                const session = event.data.object;
+                // Find the corresponding order in your database
+                const order = await strapi.service('api::order.order').findOne({ stripeId: session.id });
+
+                if (order) {
+                    // Update order status to "paid"
+                    await strapi.service('api::order.order').update({ id: order.id }, {
+                        data: { status: 'paid' }
+                    });
+                }
+
+                break;
+
+            // Handle other event types if needed
+            default:
+                console.log(`Unhandled event type ${event.type}`);
+        }
+
+        ctx.send({ received: true });
+    },
 }));
 

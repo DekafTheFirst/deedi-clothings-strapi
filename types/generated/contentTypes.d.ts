@@ -964,6 +964,8 @@ export interface ApiProductProduct extends Schema.CollectionType {
     length: Attribute.Decimal;
     width: Attribute.Decimal;
     height: Attribute.Decimal;
+    stripeProductId: Attribute.String;
+    stripePriceId: Attribute.String;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;

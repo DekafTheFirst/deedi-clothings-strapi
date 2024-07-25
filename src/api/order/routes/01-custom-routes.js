@@ -8,5 +8,16 @@ module.exports = {
                 auth: false,
             },
         },
+        {
+            method: 'POST',
+            path: '/api/orders/webhook',
+            handler: 'order.handleStripeWebhook',
+            config: {
+              policies: [],
+              middlewares: [],
+            },
+          },
+        
+
     ],
 };

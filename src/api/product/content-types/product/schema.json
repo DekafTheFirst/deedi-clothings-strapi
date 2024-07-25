@@ -95,6 +95,12 @@
     },
     "height": {
       "type": "decimal"
+    },
+    "stripeProductId": {
+      "type": "string"
+    },
+    "stripePriceId": {
+      "type": "string"
     }
   }
 }
