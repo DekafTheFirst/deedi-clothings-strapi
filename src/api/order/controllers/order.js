@@ -15,48 +15,15 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
     // 
     async create(ctx) {
         const { items, shippingInfo, billingInfo } = ctx.request.body;
-        // console.log('items', items[0])
-        // try {
-        //     // Generate line items for Stripe Payment Link
-        //     const lineItems = await Promise.all(
-        //         items.map(async (item) => {
-        //             const product = await strapi.service('api::product.product').findOne(item.productId);
+        console.log("shippingInfo", shippingInfo)
+        console.log("billingInfo", billingInfo)
 
-        //             return {
-        //                 price: product.stripePriceId,
-        //                 quantity: item.quantity,
-        //             };
-        //         })
-        //     );
-
-        //     // Create a Payment Link
-        //     const paymentLink = await stripe.paymentLinks.create({
-        //         line_items: lineItems,
-        //         // You can configure additional settings here if needed
-        //     });
-
-        //     // Optionally, you might want to save order details to the database
-        //     await strapi.service('api::order.order').create({
-        //         data: {
-        //             items,
-        //             stripeId: paymentLink.id,
-        //             // Add other necessary order details here
-        //         },
-        //     });
-
-        //     ctx.send({ url: paymentLink.url });
-        // } catch (error) {
-        //     console.error('Payment Link creation failed:', error);
-        //     ctx.throw(400, 'Payment Link creation failed');
-        // }
-
-        // console.log(products[0])
 
         try {
             const lineItems = await Promise.all(
                 items.map(async (item) => {
                     const product = await strapi.service('api::product.product').findOne(item.productId);
-                    console.log(product)
+                    // console.log(product)
                     return {
                         price_data: {
                             currency: 'usd',
@@ -73,7 +40,7 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
             const session = await stripe.checkout.sessions.create({
                 mode: 'payment',
                 success_url: `${process.env.CLIENT_URL}?success=true`,
-                cancel_url: `${process.env.CLIENT_URL}?success=false`,
+                cancel_url: `${process.env.CLIENT_URL}/checkout-page`,
                 line_items: lineItems,
                 customer_email: shippingInfo.email,               
                 payment_method_types: ['card'],
@@ -103,9 +70,9 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
     async getCouriers(ctx) {
         const { address, items } = ctx.request.body;
         const EASYSHIP_API_KEY = process.env.EASYSHIP_API_KEY;
-        console.log(EASYSHIP_API_KEY);
+        // console.log(EASYSHIP_API_KEY);
 
-        console.log(address)
+        // console.log(address)
 
         try {
             const options = {
@@ -250,8 +217,8 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
                 throw new Error(`Easyship API request failed with status ${response.status}`);
             }
 
-            console.log(response.data)
-            console.log(options)
+            // console.log(response.data)
+            // console.log(options)
             ctx.send({
                 status: response.status,
                 data: response.data,
