@@ -36,35 +36,80 @@ module.exports = {
     }
   },
 
-  async afterUpdate(event) {
-    const { result } = event;
-    console.log("result", result)
+  // async afterUpdate(event) {
+  //   const { result } = event;
+  //   console.log("result", result)
 
+  //   try {
+  //     if (result.stripeProductId) {
+  //       // Update the product in Stripe
+  //       const updatedStripeProduct = await stripe.products.update(result.stripeProductId, {
+  //         name: result.title, // Adjust based on your Strapi model
+  //         // Update other attributes as needed
+  //       });
+  //       console.log('updatedStripeProduct:', updatedStripeProduct)
+  //     }
+
+
+
+  //     await stripe.prices.create({
+  //       product: updatedStripeProduct.id,
+  //       unit_amount: result.price * 100,
+  //       currency: 'usd',
+  //     });
+
+  //     console.log(`updatedStripePrice for prodct ${result.id}`)
+
+
+  //     strapi.log.info(`Updated product ${result.id} in Stripe.`);
+
+  //   } catch (error) {
+  //     strapi.log.error(`Failed to update product in Stripe: ${error.message}`);
+  //   }
+  // },
+
+  async beforeUpdate({params}, data) {
     try {
-      if (result.stripeProductId) {
+      // Fetch the current state of the object before it is updated
+      console.log('PARAMS', params.params.data)
+
+      const oldProduct = await strapi.query('product').findOne({ id: params.id });
+      console.log("oldProduct", oldProduct);
+
+      // Check if the object has a Stripe product ID
+      if (oldProduct.stripeProductId) {
         // Update the product in Stripe
-        const updatedStripeProduct = await stripe.products.update(result.stripeProductId, {
-          name: result.title, // Adjust based on your Strapi model
+        const updatedStripeProduct = await stripe.products.update(oldProduct.stripeProductId, {
+          name: data.title || oldProduct.title, // Use new title if provided, otherwise keep old
           // Update other attributes as needed
         });
-        console.log('updatedStripeProduct:', updatedStripeProduct)
+
+        console.log('Updated Stripe Product:', updatedStripeProduct);
+
+        // Check if the price needs to be updated
+        if (data.price !== undefined) {
+          const stripePrices = await stripe.prices.list({ product: updatedStripeProduct.id, limit: 100 });
+          const currentPrice = stripePrices.data[0]; // Assuming one price per product
+
+          if (currentPrice && currentPrice.unit_amount !== data.price * 100) {
+            // Create a new price if it has changed
+            await stripe.prices.create({
+              product: updatedStripeProduct.id,
+              unit_amount: data.price * 100,
+              currency: 'usd',
+            });
+
+            console.log(`Updated Stripe Price for product ${params.id}`);
+          }
+        }
+
+        strapi.log.info(`Updated product ${params.id} in Stripe.`);
       }
-
-      await stripe.prices.create({
-        product: updatedStripeProduct.id,
-        unit_amount: result.price * 100,
-        currency: 'usd',
-      });
-
-      console.log(`updatedStripePrice for prodct ${result.id}`)
-
-
-      strapi.log.info(`Updated product ${result.id} in Stripe.`);
-
     } catch (error) {
       strapi.log.error(`Failed to update product in Stripe: ${error.message}`);
     }
   },
+
 
   async afterDelete(event) {
     const { result } = event;

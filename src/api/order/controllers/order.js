@@ -15,41 +15,85 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
     async create(ctx) {
         const { items, shippingInfo, billingInfo } = ctx.request.body;
         console.log('items', items[0])
+
         try {
-            // Generate line items for Stripe Payment Link
             const lineItems = await Promise.all(
-                items.map(async (item) => {
-                    const product = await strapi.service('api::product.product').findOne(item.productId);
+                products.map(async (product) => {
+                    const item = await strapi.service('api::product.product').findOne(product.productId);
 
                     return {
-                        price: product.stripePriceId,
-                        quantity: item.quantity,
+                        price_data: {
+                            currency: 'usd',
+                            product_data: {
+                                name: item.title,
+                            },
+                            unit_amount: Math.round(item.price * 100),
+                        },
+                        quantity: product.quantity,
                     };
                 })
             );
 
-            // Create a Payment Link
-            const paymentLink = await stripe.paymentLinks.create({
+            const session = await stripe.checkout.sessions.create({
+                mode: 'payment',
+                success_url: `${process.env.CLIENT_URL}?success=true`,
+                cancel_url: `${process.env.CLIENT_URL}?success=false`,
                 line_items: lineItems,
-                // You can configure additional settings here if needed
+                // shipping_address_collection: ,
+                // billng_address_collection: ,
+                payment_method_types: ['card'],
             });
 
-            // Optionally, you might want to save order details to the database
             await strapi.service('api::order.order').create({
                 data: {
-                    items,
-                    stripeId: paymentLink.id,
-                    // Add other necessary order details here
+                    products,
+                    stripeId: session.id,
+                    shippingInfo,
+                    billingInfo,
                 },
             });
 
-            ctx.send({ url: paymentLink.url });
-        } catch (error) {
-            console.error('Payment Link creation failed:', error);
-            ctx.throw(400, 'Payment Link creation failed');
+            return { stripeSession: session };
+        } catch (err) {
+            console.log(err)
+            ctx.response.status = 500;
+            return err;
         }
+        // try {
+        //     // Generate line items for Stripe Payment Link
+        //     const lineItems = await Promise.all(
+        //         items.map(async (item) => {
+        //             const product = await strapi.service('api::product.product').findOne(item.productId);
 
-        
+        //             return {
+        //                 price: product.stripePriceId,
+        //                 quantity: item.quantity,
+        //             };
+        //         })
+        //     );
+
+        //     // Create a Payment Link
+        //     const paymentLink = await stripe.paymentLinks.create({
+        //         line_items: lineItems,
+        //         // You can configure additional settings here if needed
+        //     });
+
+        //     // Optionally, you might want to save order details to the database
+        //     await strapi.service('api::order.order').create({
+        //         data: {
+        //             items,
+        //             stripeId: paymentLink.id,
+        //             // Add other necessary order details here
+        //         },
+        //     });
+
+        //     ctx.send({ url: paymentLink.url });
+        // } catch (error) {
+        //     console.error('Payment Link creation failed:', error);
+        //     ctx.throw(400, 'Payment Link creation failed');
+        // }
+
+
     },
 
 
