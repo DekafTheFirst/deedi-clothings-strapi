@@ -82,7 +82,7 @@
     },
     "desc": {
       "type": "blocks",
-      "required": true
+      "required": false
     },
     "weight": {
       "type": "decimal"

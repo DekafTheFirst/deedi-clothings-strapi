@@ -49,51 +49,7 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
             ctx.throw(400, 'Payment Link creation failed');
         }
 
-        // const { products, shippingInfo, billingInfo } = ctx.request.body;
-        // // console.log(products[0])
-
-        // try {
-        //     const lineItems = await Promise.all(
-        //         products.map(async (product) => {
-        //             const item = await strapi.service('api::product.product').findOne(product.productId);
-
-        //             return {
-        //                 price_data: {
-        //                     currency: 'usd',
-        //                     product_data: {
-        //                         name: item.title,
-        //                     },
-        //                     unit_amount: Math.round(item.price * 100),
-        //                 },
-        //                 quantity: product.quantity,
-        //             };
-        //         })
-        //     );
-
-        //     const session = await stripe.checkout.sessions.create({
-        //         mode: 'payment',
-        //         success_url: `${process.env.CLIENT_URL}?success=true`,
-        //         cancel_url: `${process.env.CLIENT_URL}?success=false`,
-        //         line_items: lineItems,
-        //         shipping_address_collection: { allowed_countries: ['US', 'CA'] },
-        //         payment_method_types: ['card'],
-        //     });
-
-        //     await strapi.service('api::order.order').create({
-        //         data: {
-        //             products,
-        //             stripeId: session.id,
-        //             shippingInfo,
-        //             billingInfo,
-        //         },
-        //     });
-
-        //     return { stripeSession: session };
-        // } catch (err) {
-        //     console.log(err)
-        //     ctx.response.status = 500;
-        //     return err;
-        // }
+        
     },
 
 
@@ -270,10 +226,6 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
         }
     },
 
-    // async createPaymentLink(ctx) {
-
-    // },
-
 
     async handleStripeWebhook(ctx) {
         const sig = ctx.request.headers['stripe-signature'];
@@ -311,5 +263,46 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
 
         ctx.send({ received: true });
     },
+
+    async handleStripeWebhook(ctx) {
+        const sig = ctx.request.headers['stripe-signature'];
+        const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+        let event;
+
+        try {
+            event = stripe.webhooks.constructEvent(ctx.request.body, sig, webhookSecret);
+        } catch (err) {
+            console.log(`Webhook error: ${err.message}`);
+            ctx.response.status = 400;
+            return { error: 'Webhook error: ' + err.message };
+        }
+
+        switch (event.type) {
+            // case 'product.deleted':
+            //     const deletedProduct = event.data.object;
+            //     await strapi.service('api::product.product').delete({ stripeProductId: deletedProduct.id });
+            //     break;
+
+            case 'checkout.session.completed':
+                const session = event.data.object;
+                // Find the corresponding order in your database
+                const order = await strapi.service('api::order.order').findOne({ stripeId: session.id });
+
+                if (order) {
+                    // Update order status to "paid"
+                    await strapi.service('api::order.order').update({ id: order.id }, {
+                        data: { status: 'paid' }
+                    });
+                }
+                break;
+
+            // Handle other event types if needed
+            default:
+                console.log(`Unhandled event type ${event.type}`);
+        }
+
+        ctx.send({ received: true });
+    }
 }));
 

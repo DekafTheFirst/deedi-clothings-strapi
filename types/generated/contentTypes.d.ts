@@ -959,7 +959,7 @@ export interface ApiProductProduct extends Schema.CollectionType {
       'manyToMany',
       'api::size.size'
     >;
-    desc: Attribute.Blocks & Attribute.Required;
+    desc: Attribute.Blocks;
     weight: Attribute.Decimal;
     length: Attribute.Decimal;
     width: Attribute.Decimal;
