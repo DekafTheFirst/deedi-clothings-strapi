@@ -12,22 +12,23 @@ const { createCoreController } = require('@strapi/strapi').factories;
 
 // @ts-ignore
 module.exports = createCoreController("api::order.order", ({ strapi }) => ({
+    // 
     async create(ctx) {
         const { items, shippingInfo, billingInfo } = ctx.request.body;
         console.log('items', items[0])
 
         try {
             const lineItems = await Promise.all(
-                products.map(async (product) => {
-                    const item = await strapi.service('api::product.product').findOne(product.productId);
-
+                items.map(async (item) => {
+                    const product = await strapi.service('api::product.product').findOne(item.productId);
+                    
                     return {
                         price_data: {
                             currency: 'usd',
                             product_data: {
-                                name: item.title,
+                                name: product.title,
                             },
-                            unit_amount: Math.round(item.price * 100),
+                            unit_amount: Math.round(product.price * 100),
                         },
                         quantity: product.quantity,
                     };
@@ -59,46 +60,52 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
             ctx.response.status = 500;
             return err;
         }
-        // try {
-        //     // Generate line items for Stripe Payment Link
-        //     const lineItems = await Promise.all(
-        //         items.map(async (item) => {
-        //             const product = await strapi.service('api::product.product').findOne(item.productId);
-
-        //             return {
-        //                 price: product.stripePriceId,
-        //                 quantity: item.quantity,
-        //             };
-        //         })
-        //     );
-
-        //     // Create a Payment Link
-        //     const paymentLink = await stripe.paymentLinks.create({
-        //         line_items: lineItems,
-        //         // You can configure additional settings here if needed
-        //     });
-
-        //     // Optionally, you might want to save order details to the database
-        //     await strapi.service('api::order.order').create({
-        //         data: {
-        //             items,
-        //             stripeId: paymentLink.id,
-        //             // Add other necessary order details here
-        //         },
-        //     });
-
-        //     ctx.send({ url: paymentLink.url });
-        // } catch (error) {
-        //     console.error('Payment Link creation failed:', error);
-        //     ctx.throw(400, 'Payment Link creation failed');
-        // }
-
-
+        
     },
 
 
 
-
+    // async create(ctx) {
+        //     const { items, shippingInfo, billingInfo } = ctx.request.body;
+        //     console.log('items', items[0])
+    
+            
+        //     try {
+        //         // Generate line items for Stripe Payment Link
+        //         const lineItems = await Promise.all(
+        //             items.map(async (item) => {
+        //                 const product = await strapi.service('api::product.product').findOne(item.productId);
+    
+        //                 return {
+        //                     price: product.stripePriceId,
+        //                     quantity: item.quantity,
+        //                 };
+        //             })
+        //         );
+    
+        //         // Create a Payment Link
+        //         const paymentLink = await stripe.paymentLinks.create({
+        //             line_items: lineItems,
+        //             // You can configure additional settings here if needed
+        //         });
+    
+        //         // Optionally, you might want to save order details to the database
+        //         await strapi.service('api::order.order').create({
+        //             data: {
+        //                 items,
+        //                 stripeId: paymentLink.id,
+        //                 // Add other necessary order details here
+        //             },
+        //         });
+    
+        //         ctx.send({ url: paymentLink.url });
+        //     } catch (error) {
+        //         console.error('Payment Link creation failed:', error);
+        //         ctx.throw(400, 'Payment Link creation failed');
+        //     }
+    
+    
+        // }, 
 
     async getCouriers(ctx) {
         const { address, items } = ctx.request.body;
