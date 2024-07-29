@@ -10,14 +10,24 @@ module.exports = {
         },
         {
             method: 'POST',
-            path: '/api/orders/webhook',
+            path: '/orders/webhook',
             handler: 'order.handleStripeWebhook',
             config: {
-              policies: [],
-              middlewares: [],
+                auth: false,  // This makes the endpoint unauthenticated
+                policies: [],
+                middlewares: [],
             },
-          },
-        
+        },
+        {
+            method: 'POST',
+            path: '/verify-checkout',
+            handler: 'order.verifyCheckout',
+            config: {
+                policies: [],
+                middlewares: [],
+            },
+        },
+
 
     ],
 };

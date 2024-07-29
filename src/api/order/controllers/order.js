@@ -15,8 +15,8 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
     // 
     async create(ctx) {
         const { items, shippingInfo, billingInfo } = ctx.request.body;
-        console.log("shippingInfo", shippingInfo)
-        console.log("billingInfo", billingInfo)
+        // console.log("shippingInfo", shippingInfo)
+        // console.log("billingInfo", billingInfo)
 
 
         try {
@@ -39,10 +39,10 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
 
             const session = await stripe.checkout.sessions.create({
                 mode: 'payment',
-                success_url: `${process.env.CLIENT_URL}?success=true`,
-                cancel_url: `${process.env.CLIENT_URL}/checkout-page`,
+                success_url: `${process.env.CLIENT_URL}/checkout-success?session_id={CHECKOUT_SESSION_ID}`,
+                cancel_url: `${process.env.CLIENT_URL}/checkout`,
                 line_items: lineItems,
-                customer_email: shippingInfo.email,               
+                customer_email: shippingInfo.email,
                 payment_method_types: ['card'],
             });
 
@@ -60,6 +60,25 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
             console.log(err)
             ctx.response.status = 500;
             return err;
+        }
+    },
+
+    async verifyCheckout(ctx) {
+        const { token } = ctx.request.body;
+
+        try {
+            // Verify the token with Stripe
+            const session = await stripe.checkout.sessions.retrieve(token);
+
+            if (session.payment_status === 'paid') {
+                // Handle successful payment
+                ctx.send({ success: true, message: 'Payment verified' });
+            } else {
+                // Handle payment failure
+                ctx.send({ success: false, message: 'Payment not verified' });
+            }
+        } catch (error) {
+            ctx.send({ success: false, message: error.message });
         }
     },
 
@@ -143,71 +162,7 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
                     shipping_settings: { units: { dimensions: 'in', weight: 'lb' } }
 
 
-                    // parcels: [
-                    //     {
-                    //       box: null,
-                    //       items: [
-                    //         {
-                    //           dimensions: {height: 3, length: 1, width: 2},
-                    //           quantity: 2,
-                    //           actual_weight: 10,
-                    //           category: 'fashion',
-                    //           declared_currency: 'USD',
-                    //           declared_customs_value: 20,
-                    //           description: 'item',
-                    //           origin_country_alpha2: 'HK',
-                    //           sku: 'sku'
-                    //         }
-                    //       ],
-                    //       total_actual_weight: 1
-                    //     }
-                    //   ],
 
-
-
-                    // destination_address: {
-                    //     city: 'Hong Kong',
-                    //     company_name: null,
-                    //     contact_email: 'asd@asd.com',
-                    //     contact_name: 'Foo Bar',
-                    //     contact_phone: null,
-                    //     country_alpha2: 'HK',
-                    //     line_1: 'Kennedy Town',
-                    //     line_2: 'Block 3',
-                    //     postal_code: '0000',
-                    //     state: 'Yuen Long'
-                    // },
-                    // origin_address: {
-                    //     city: 'Hong Kong',
-                    //     company_name: null,
-                    //     contact_email: 'asd@asd.com',
-                    //     contact_name: 'Foo Bar',
-                    //     contact_phone: null,
-                    //     country_alpha2: 'HK',
-                    //     line_1: 'Kennedy Town',
-                    //     line_2: 'Block 3',
-                    //     postal_code: '0000',
-                    //     state: 'Yuen Long'
-                    // },
-                    // parcels: [
-                    //     {
-                    //         box: null,
-                    //         items: [
-                    //             {
-                    //                 actual_weight: 10,
-                    //                 category: 'fashion',
-                    //                 declared_currency: 'USD',
-                    //                 declared_customs_value: 20,
-                    //                 description: 'item',
-                    //                 dimensions: { height: 3, length: 1, width: 2 },
-                    //                 origin_country_alpha2: 'HK',
-                    //                 quantity: 2,
-                    //                 sku: 'sku'
-                    //             }
-                    //         ],
-                    //         total_actual_weight: 1
-                    //     }
-                    // ]
                 },
             };
 
@@ -238,51 +193,53 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
     },
 
 
+    // async handleStripeWebhook(ctx) {
+    //     const sig = ctx.request.headers['stripe-signature'];
+    //     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+    //     let event;
+
+    //     try {
+    //         event = stripe.webhooks.constructEvent(ctx.request.body, sig, webhookSecret);
+    //     } catch (err) {
+    //         console.log(`Webhook error: ${err.message}`);
+    //         ctx.response.status = 400;
+    //         return { error: 'Webhook error: ' + err.message };
+    //     }
+
+    //     switch (event.type) {
+    //         case 'checkout.session.completed':
+    //             const session = event.data.object;
+    //             // Find the corresponding order in your database
+    //             const order = await strapi.service('api::order.order').findOne({ stripeId: session.id });
+
+    //             if (order) {
+    //                 // Update order status to "paid"
+    //                 await strapi.service('api::order.order').update({ id: order.id }, {
+    //                     data: { status: 'paid' }
+    //                 });
+    //             }
+
+    //             break;
+
+    //         // Handle other event types if needed
+    //         default:
+    //             console.log(`Unhandled event type ${event.type}`);
+    //     }
+
+    //     ctx.send({ received: true });
+    // },
+
     async handleStripeWebhook(ctx) {
+        console.log('reaching here')
         const sig = ctx.request.headers['stripe-signature'];
-        const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+        const endpointSecret = "whsec_8ae6fbe7f7642ac26851cdf79de27ce529aa0f40d1f7";
+
 
         let event;
 
         try {
-            event = stripe.webhooks.constructEvent(ctx.request.body, sig, webhookSecret);
-        } catch (err) {
-            console.log(`Webhook error: ${err.message}`);
-            ctx.response.status = 400;
-            return { error: 'Webhook error: ' + err.message };
-        }
-
-        switch (event.type) {
-            case 'checkout.session.completed':
-                const session = event.data.object;
-                // Find the corresponding order in your database
-                const order = await strapi.service('api::order.order').findOne({ stripeId: session.id });
-
-                if (order) {
-                    // Update order status to "paid"
-                    await strapi.service('api::order.order').update({ id: order.id }, {
-                        data: { status: 'paid' }
-                    });
-                }
-
-                break;
-
-            // Handle other event types if needed
-            default:
-                console.log(`Unhandled event type ${event.type}`);
-        }
-
-        ctx.send({ received: true });
-    },
-
-    async handleStripeWebhook(ctx) {
-        const sig = ctx.request.headers['stripe-signature'];
-        const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
-        let event;
-
-        try {
-            event = stripe.webhooks.constructEvent(ctx.request.body, sig, webhookSecret);
+            event = stripe.webhooks.constructEvent(ctx.request.body, sig, endpointSecret);
         } catch (err) {
             console.log(`Webhook error: ${err.message}`);
             ctx.response.status = 400;
