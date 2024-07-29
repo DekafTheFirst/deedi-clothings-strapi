@@ -50,6 +50,7 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
                 data: {
                     items,
                     stripeId: session.id,
+                    status: 'pending',
                     shippingInfo,
                     billingInfo,
                 },
@@ -232,15 +233,14 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
 
     async handleStripeWebhook(ctx) {
         const sig = ctx?.request.headers['stripe-signature'];
-        const endpointSecret = "whsec_8ae6fbe7f7642ac26851cdf79de27ce529aa0f40d1f7";
+        const endpointSecret = "whsec_8ae6fbe7f7642ac26851cdf79de27ce529aa0f40d1f78f4f31fc2746deac90cd";
 
 
         let event;
 
         try {
             const raw = ctx?.request.body?.[Symbol.for('unparsedBody')];
-            console.log("RAWBODY",raw)
-
+            // console.log("RAWBODY",raw)
             event = stripe.webhooks.constructEvent(raw, sig, endpointSecret);
         } catch (err) {
             console.log(`Webhook error: ${err.message}`);
@@ -257,12 +257,18 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
             case 'checkout.session.completed':
                 const session = event.data.object;
                 // Find the corresponding order in your database
-                const order = await strapi.service('api::order.order').findOne({ stripeId: session.id });
+                const order = await strapi.db.query('api::order.order').findOne({
+                    where: { stripeId: session.id },
+                });
+
+                // console.log('session.id', session.id)
+                // console.log('order', order)
 
                 if (order) {
                     // Update order status to "paid"
-                    await strapi.service('api::order.order').update({ id: order.id }, {
-                        data: { status: 'paid' }
+                    await strapi.db.query('api::order.order').update({
+                        where: { id: order.id },
+                        data: { status: 'paid' },
                     });
                 }
                 break;

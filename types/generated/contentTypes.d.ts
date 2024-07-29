@@ -893,7 +893,10 @@ export interface ApiOrderOrder extends Schema.CollectionType {
     stripeId: Attribute.Text;
     products: Attribute.JSON;
     selectedCourier: Attribute.String;
-    status: Attribute.String;
+    status: Attribute.Enumeration<
+      ['pending', 'paid', 'shipped', 'delivered', 'cancelled']
+    > &
+      Attribute.DefaultTo<'pending'>;
     totalAmount: Attribute.Float;
     shipping_address: Attribute.Relation<
       'api::order.order',

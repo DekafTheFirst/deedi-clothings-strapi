@@ -25,7 +25,15 @@
       "type": "string"
     },
     "status": {
-      "type": "string"
+      "type": "enumeration",
+      "enum": [
+        "pending",
+        "paid",
+        "shipped",
+        "delivered",
+        "cancelled"
+      ],
+      "default": "pending"
     },
     "totalAmount": {
       "type": "float"
