@@ -12,13 +12,10 @@
   },
   "pluginOptions": {},
   "attributes": {
-    "email": {
-      "type": "string"
-    },
     "stripeId": {
       "type": "text"
     },
-    "products": {
+    "items": {
       "type": "json"
     },
     "selectedCourier": {

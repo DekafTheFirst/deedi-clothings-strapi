@@ -889,9 +889,8 @@ export interface ApiOrderOrder extends Schema.CollectionType {
     draftAndPublish: true;
   };
   attributes: {
-    email: Attribute.String;
     stripeId: Attribute.Text;
-    products: Attribute.JSON;
+    items: Attribute.JSON;
     selectedCourier: Attribute.String;
     status: Attribute.Enumeration<
       ['pending', 'paid', 'shipped', 'delivered', 'cancelled']

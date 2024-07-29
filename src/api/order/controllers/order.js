@@ -50,7 +50,6 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
                 data: {
                     items,
                     stripeId: session.id,
-                    status: 'pending',
                     shippingInfo,
                     billingInfo,
                 },
@@ -262,14 +261,17 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
                 });
 
                 // console.log('session.id', session.id)
-                // console.log('order', order)
+                console.log('order', order)
 
                 if (order) {
                     // Update order status to "paid"
-                    await strapi.db.query('api::order.order').update({
+                    const updatedOrder = await strapi.db.query('api::order.order').update({
                         where: { id: order.id },
                         data: { status: 'paid' },
                     });
+
+                    console.log('updatedOrder', updatedOrder)
+
                 }
                 break;
 
