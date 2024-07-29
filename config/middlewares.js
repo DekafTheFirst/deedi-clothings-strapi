@@ -5,7 +5,14 @@ module.exports = [
   'strapi::cors',
   'strapi::poweredBy',
   'strapi::query',
-  'strapi::body',
+  {
+    name: "strapi::body",
+    config: {
+      includeUnparsed: true,
+      patchKoa: true,
+      multipart: true,
+    }
+  },
   'strapi::session',
   'strapi::favicon',
   'strapi::public',

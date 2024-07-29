@@ -231,15 +231,17 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
     // },
 
     async handleStripeWebhook(ctx) {
-        console.log('reaching here')
-        const sig = ctx.request.headers['stripe-signature'];
+        const sig = ctx?.request.headers['stripe-signature'];
         const endpointSecret = "whsec_8ae6fbe7f7642ac26851cdf79de27ce529aa0f40d1f7";
 
 
         let event;
 
         try {
-            event = stripe.webhooks.constructEvent(ctx.request.body, sig, endpointSecret);
+            const raw = ctx?.request.body?.[Symbol.for('unparsedBody')];
+            console.log("RAWBODY",raw)
+
+            event = stripe.webhooks.constructEvent(raw, sig, endpointSecret);
         } catch (err) {
             console.log(`Webhook error: ${err.message}`);
             ctx.response.status = 400;
