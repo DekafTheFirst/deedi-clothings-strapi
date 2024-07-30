@@ -889,9 +889,9 @@ export interface ApiOrderOrder extends Schema.CollectionType {
     draftAndPublish: true;
   };
   attributes: {
-    stripeId: Attribute.Text;
+    stripeId: Attribute.String;
     items: Attribute.JSON;
-    selectedCourier: Attribute.String;
+    selectedCourierId: Attribute.String;
     status: Attribute.Enumeration<
       ['pending', 'paid', 'shipped', 'delivered', 'cancelled']
     > &
@@ -907,6 +907,19 @@ export interface ApiOrderOrder extends Schema.CollectionType {
       'manyToOne',
       'api::billing-address.billing-address'
     >;
+    shipmentId: Attribute.String;
+    trackingPageUrl: Attribute.String;
+    shipmentStatus: Attribute.String;
+    courierName: Attribute.String;
+    shippingCost: Attribute.Decimal;
+    currency: Attribute.String;
+    shippingLabelUrl: Attribute.String;
+    minDeliveryTime: Attribute.Integer;
+    maxDeliveryTime: Attribute.Integer;
+    labelGeneratedAt: Attribute.DateTime;
+    labelPaidAt: Attribute.DateTime;
+    trackingNumber: Attribute.String;
+    shippingDocuments: Attribute.JSON;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;

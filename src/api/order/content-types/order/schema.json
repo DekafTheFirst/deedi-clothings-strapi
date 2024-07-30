@@ -13,12 +13,12 @@
   "pluginOptions": {},
   "attributes": {
     "stripeId": {
-      "type": "text"
+      "type": "string"
     },
     "items": {
       "type": "json"
     },
-    "selectedCourier": {
+    "selectedCourierId": {
       "type": "string"
     },
     "status": {
@@ -46,6 +46,45 @@
       "relation": "manyToOne",
       "target": "api::billing-address.billing-address",
       "inversedBy": "orders"
+    },
+    "shipmentId": {
+      "type": "string"
+    },
+    "trackingPageUrl": {
+      "type": "string"
+    },
+    "shipmentStatus": {
+      "type": "string"
+    },
+    "courierName": {
+      "type": "string"
+    },
+    "shippingCost": {
+      "type": "decimal"
+    },
+    "currency": {
+      "type": "string"
+    },
+    "shippingLabelUrl": {
+      "type": "string"
+    },
+    "minDeliveryTime": {
+      "type": "integer"
+    },
+    "maxDeliveryTime": {
+      "type": "integer"
+    },
+    "labelGeneratedAt": {
+      "type": "datetime"
+    },
+    "labelPaidAt": {
+      "type": "datetime"
+    },
+    "trackingNumber": {
+      "type": "string"
+    },
+    "shippingDocuments": {
+      "type": "json"
     }
   }
 }
