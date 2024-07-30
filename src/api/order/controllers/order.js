@@ -14,7 +14,7 @@ const { createCoreController } = require('@strapi/strapi').factories;
 module.exports = createCoreController("api::order.order", ({ strapi }) => ({
     // 
     async create(ctx) {
-        const { items, shippingInfo, billingInfo, selectedCourierId, totalAmount } = ctx.request.body;
+        const { items, shippingInfo, billingInfo, totalAmount } = ctx.request.body;
         console.log("items", items)
         // console.log("billingInfo", billingInfo)
 
@@ -53,7 +53,7 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
                     stripeId: session.id,
                     shippingInfo,
                     billingInfo,
-                    selectedCourierId,
+                    // courierId: selectedCourierId,
                     totalAmount
                 },
             });
@@ -117,27 +117,29 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
                     // },
 
                     destination_address: {
-                        country_alpha2: 'US',
-                        city: 'New York',
+                        country_alpha2: 'HK',
+                        city: 'Hong Kong',
                         company_name: null,
-                        contact_email: 'info@onetradectr.com',
-                        contact_name: 'John Doe',
+                        contact_email: 'asd@asd.com',
+                        contact_name: 'Foo Bar',
                         contact_phone: null,
-                        line_1: '285 Fulton St',
-                        postal_code: '10007',
-                        state: 'NY'
+                        line_1: 'Kennedy Town',
+                        line_2: 'Block 3',
+                        postal_code: '0000',
+                        state: 'Yuen Long'
                     },
 
                     origin_address: {
-                        city: 'Baltimore',
+                        city: 'Hong Kong',
                         company_name: null,
-                        contact_email: 'info@innerharbor.com',
-                        contact_name: 'Jane Smith',
+                        contact_email: 'asd@asd.com',
+                        contact_name: 'Foo Bar',
                         contact_phone: null,
-                        country_alpha2: 'US',
-                        line_1: '401 Light St',
-                        postal_code: '21202',
-                        state: 'MD'
+                        country_alpha2: 'HK',
+                        line_1: 'Kennedy Town',
+                        line_2: 'Block 3',
+                        postal_code: '0000',
+                        state: 'Yuen Long'
                     },
 
                     incoterms: 'DDU',
@@ -258,27 +260,29 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
                                 },
 
                                 destination_address: {
-                                    country_alpha2: 'US',
-                                    city: 'New York',
-                                    company_name: null,
-                                    contact_email: 'info@onetradectr.com',
-                                    contact_name: 'John Doe',
+                                    city: 'Hong Kong',
+                                    company_name: 'Test Plc.',
+                                    contact_email: 'asd@asd.com',
+                                    contact_name: 'Foo Bar',
                                     contact_phone: '+852-3008-5678',
-                                    line_1: '285 Fulton St',
-                                    postal_code: '10007',
-                                    state: 'NY'
+                                    country_alpha2: 'HK',
+                                    line_1: 'Kennedy Town',
+                                    line_2: 'Block 3',
+                                    postal_code: '0000',
+                                    state: 'Yuen Long'
                                 },
 
                                 origin_address: {
-                                    city: 'Baltimore',
-                                    company_name: 'Kaf Company',
-                                    contact_email: 'info@innerharbor.com',
-                                    contact_name: 'Jane Smith',
+                                    city: 'Hong Kong',
+                                    company_name: 'Test Plc.',
+                                    contact_email: 'asd@asd.com',
+                                    contact_name: 'Foo Bar',
                                     contact_phone: '+852-3008-5678',
-                                    country_alpha2: 'US',
-                                    line_1: '401 Light St',
-                                    postal_code: '21202',
-                                    state: 'MD'
+                                    country_alpha2: 'HK',
+                                    line_1: 'Kennedy Town',
+                                    line_2: 'Block 3',
+                                    postal_code: '0000',
+                                    state: 'Yuen Long'
                                 },
 
                                 incoterms: 'DDU',
@@ -295,7 +299,7 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
                                     additional_services: { qr_code: 'none' },
                                     buy_label: true,
                                     buy_label_synchronous: true,
-                                    printing_options: { commercial_invoice: 'A4', format: 'png', label: '4x6', packing_slip: '4x6' },
+                                    printing_options: {commercial_invoice: 'A4', format: 'url', label: '4x6', packing_slip: '4x6'},
                                     units: { dimensions: 'in', weight: 'lb' }
                                 },
                                 parcels: [
@@ -346,7 +350,7 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
                         }
 
                         if (easyshipResponse.status !== 200) {
-                            console.log(easyshipResponse)
+                            // console.log(easyshipResponse)
                             throw new Error(`Easyship API request failed with status ${easyshipResponse.status}`);
                         }
 
