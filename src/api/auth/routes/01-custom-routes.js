@@ -1,3 +1,5 @@
+const auth = require("../controllers/auth");
+
 module.exports = {
     routes: [
       {
@@ -5,6 +7,7 @@ module.exports = {
         path: '/auth/firebase',
         handler: 'auth.firebaseAuth',
         config: {
+          auth: false,
           policies: [],
           middlewares: ['global::verifyFirebaseToken'],
         },
