@@ -4,10 +4,11 @@ const admin = require('../../config/firebaseAdmin');
 
 module.exports = (config, { strapi }) => {
   return async (ctx, next) => {
+    // const { displayName, photoURL } = ctx.request.body;
 
-
+    // console.log('displayName in middleware', displayName)
+    // console.log('photoURL in middleware', photoURL)
     const { idToken } = ctx.request.body;
-    console.log('idToken:', idToken);
 
 
     if (!idToken) {
