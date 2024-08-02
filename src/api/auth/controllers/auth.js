@@ -8,12 +8,13 @@ module.exports = {
             // console.log(ctx.state.user);
             let user = await strapi.query('plugin::users-permissions.user').findOne({
                 where: { email },
+
             });
 
             const { displayName, photoURL } = ctx.request.body;
 
-            console.log('displayName', displayName)
-            console.log('photoUrl', photoURL)
+            // console.log('displayName', displayName)
+            // console.log('photoUrl', photoURL)
 
 
 
@@ -44,6 +45,7 @@ module.exports = {
                 });
                 console.log('updated user successfully', user)
             }
+
 
             const sanitizedUser = await sanitize.contentAPI.query(user, { model: strapi.query('plugin::users-permissions.user').model })
 

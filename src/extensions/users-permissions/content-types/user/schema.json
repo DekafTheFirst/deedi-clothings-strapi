@@ -69,7 +69,37 @@
       "type": "string"
     },
     "uid": {
-      "type": "uid"
+      "type": "string"
+    },
+    "orders": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::order.order",
+      "mappedBy": "user"
+    },
+    "cart": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::cart.cart",
+      "inversedBy": "user"
+    },
+    "billing_addresses": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::billing-address.billing-address",
+      "mappedBy": "user"
+    },
+    "shipping_addresses": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::shipping-address.shipping-address",
+      "mappedBy": "user"
+    },
+    "wishlist": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::wishlist.wishlist",
+      "mappedBy": "users_permissions_user"
     }
   }
 }

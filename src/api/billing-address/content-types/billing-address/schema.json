@@ -55,6 +55,12 @@
       "relation": "oneToMany",
       "target": "api::order.order",
       "mappedBy": "billing_address"
+    },
+    "user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "billing_addresses"
     }
   }
 }

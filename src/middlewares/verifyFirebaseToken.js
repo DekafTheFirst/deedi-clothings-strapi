@@ -19,7 +19,7 @@ module.exports = (config, { strapi }) => {
 
     try {
       const decodedToken = await admin.auth().verifyIdToken(idToken);
-      console.log('Decoded Token:', decodedToken);
+      // console.log('Decoded Token:', decodedToken);
       ctx.state.user = decodedToken;
 
       await next();
