@@ -5,7 +5,7 @@ module.exports = {
         try {
             const { uid, email } = ctx.state.user; // Use the user context set by middleware
             // Check if the user exists in Strapi
-            console.log(ctx.state.user);
+            // console.log(ctx.state.user);
             let user = await strapi.query('plugin::users-permissions.user').findOne({
                 where: { email },
             });
@@ -31,7 +31,6 @@ module.exports = {
                     },
                 });
 
-                console.log('user', user)
             }
 
             else if (displayName || photoURL) {
@@ -46,11 +45,13 @@ module.exports = {
                 console.log('updated user successfully', user)
             }
 
+            const sanitizedUser = await sanitize.contentAPI.query(user, { model: strapi.query('plugin::users-permissions.user').model })
 
+            console.log('sanizedUser', sanitizedUser)
 
             ctx.send({
                 message: 'User authenticated successfully',
-                user: sanitize.contentAPI.query(user, { model: strapi.query('plugin::users-permissions.user').model }),
+                user: sanitizedUser,
             });
         } catch (error) {
             console.log('error in auth controller', error)
