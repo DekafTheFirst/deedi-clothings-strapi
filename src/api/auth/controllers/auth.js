@@ -8,10 +8,8 @@ module.exports = {
             // console.log(ctx.state.user);
             let user = await strapi.query('plugin::users-permissions.user').findOne({
                 where: { email },
-
             });
 
-            const { displayName, photoURL } = ctx.request.body;
 
             // console.log('displayName', displayName)
             // console.log('photoUrl', photoURL)
@@ -22,8 +20,6 @@ module.exports = {
                 // Create a new user in Strapi
                 user = await strapi.query('plugin::users-permissions.user').create({
                     data: {
-                        username: displayName,
-                        photoUrl: photoURL,
                         email,
                         uid,
                         provider: 'firebase',
@@ -34,17 +30,7 @@ module.exports = {
 
             }
 
-            else if (displayName || photoURL) {
-                user = await strapi.query('plugin::users-permissions.user').update({
-                    where: { email },
-                    data: {
-                        username: displayName,
-                        photoUrl: photoURL,
-                        // Assuming '1' is the ID of the authenticated role
-                    },
-                });
-                console.log('updated user successfully', user)
-            }
+
 
 
             const sanitizedUser = await sanitize.contentAPI.query(user, { model: strapi.query('plugin::users-permissions.user').model })
@@ -61,4 +47,37 @@ module.exports = {
             ctx.body = { error: 'Internal Server Error' };
         }
     },
+
+    // async updateUser(ctx) {
+    //     const { displayName, photoURL, id } = ctx.request.body;
+
+    //     try {
+    //         user = await strapi.query('plugin::users-permissions.user').update({
+    //             where: { id },
+    //             data: {
+    //                 username: displayName,
+    //                 photoUrl: photoURL,
+    //                 // Assuming '1' is the ID of the authenticated role
+    //             },
+    //         });
+
+    //         console.log('updated user successfully', user)
+
+
+    //         const sanitizedUser = await sanitize.contentAPI.query(user, { model: strapi.query('plugin::users-permissions.user').model })
+
+    //         console.log('sanizedUser', sanitizedUser)
+
+    //         ctx.send({
+    //             message: 'User authenticated successfully',
+    //             user: sanitizedUser,
+    //         });
+    //     } catch (error) {
+    //         console.log('error in auth controller', error)
+    //         ctx.status = 500;
+    //         ctx.body = { error: 'Internal Server Error' };
+    //     }
+    // }
 };
+
+
