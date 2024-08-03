@@ -8,8 +8,8 @@ module.exports = (config, { strapi }) => {
 
     // console.log('displayName in middleware', displayName)
     // console.log('photoURL in middleware', photoURL)
-    const { idToken } = ctx.request.body;
-
+    const idToken = ctx.request.headers.authorization?.split('Bearer ')[1];
+    console.log(idToken)
 
     if (!idToken) {
       ctx.status = 401;
@@ -19,7 +19,7 @@ module.exports = (config, { strapi }) => {
 
     try {
       const decodedToken = await admin.auth().verifyIdToken(idToken);
-      // console.log('Decoded Token:', decodedToken);
+      console.log('Decoded Token:', decodedToken);
       ctx.state.user = decodedToken;
 
       await next();
