@@ -9,7 +9,7 @@ module.exports = (config, { strapi }) => {
     // console.log('displayName in middleware', displayName)
     // console.log('photoURL in middleware', photoURL)
     const idToken = ctx.request.headers.authorization?.split('Bearer ')[1];
-    // console.log(idToken)
+    console.log(idToken)
 
     if (!idToken) {
       ctx.status = 401;
