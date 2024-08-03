@@ -771,7 +771,6 @@ export interface PluginUsersPermissionsUser extends Schema.CollectionType {
       'plugin::users-permissions.role'
     >;
     photoUrl: Attribute.String;
-    uid: Attribute.String;
     orders: Attribute.Relation<
       'plugin::users-permissions.user',
       'oneToMany',

@@ -2,9 +2,6 @@ const { createCoreController } = require('@strapi/strapi').factories;
 
 module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
     async create(ctx) {
-        const state = ctx.state; // Get the user ID from the authenticated context
-        console.log('state',state);
-
         const userId = ctx.request.body.userId
         // Check if the user already has a cart
         let cart = await strapi.db.query('api::cart.cart').findOne({
@@ -16,7 +13,9 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
             cart = await strapi.db.query('api::cart.cart').create({
                 data: {
                     user: userId,
-                    items: [], // Initialize with an empty array or as per your requirements
+                    items: [], 
+                    publishedAt: new Date(), // Set the publishedAt field to publish the cart
+                    // Initialize with an empty array or as per your requirements
                 },
             });
         }

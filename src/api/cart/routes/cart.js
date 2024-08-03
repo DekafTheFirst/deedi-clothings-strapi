@@ -15,9 +15,6 @@ module.exports = {
             path: "/cart",
             handler: "cart.create",
             config: {
-                middlewares: ['global::verifyFirebaseToken'],
-                auth: false,
-                // See the usage section below for middleware naming conventions
             },
         },
     ],

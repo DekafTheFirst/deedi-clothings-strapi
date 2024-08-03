@@ -68,9 +68,6 @@
     "photoUrl": {
       "type": "string"
     },
-    "uid": {
-      "type": "string"
-    },
     "orders": {
       "type": "relation",
       "relation": "oneToMany",

@@ -20,7 +20,6 @@
     "@types/koa-bodyparser": "^4.3.12",
     "axios": "^1.7.2",
     "better-sqlite3": "^11.0.0",
-    "firebase-admin": "^12.3.0",
     "mysql": "2.18.1",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
