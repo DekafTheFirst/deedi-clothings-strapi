@@ -17,6 +17,15 @@ module.exports = {
             config: {
             },
         },
+        {
+            method: 'GET',
+            path: '/carts',
+            handler: 'cart.find',
+            config: {
+              policies: [],
+              middlewares: [],
+            },
+          },
     ],
 };
 

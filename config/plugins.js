@@ -3,7 +3,7 @@ module.exports = {
         config: {
             register: {
                 allowedFields: ['photoUrl']
-            }
+            },
         }
     }
 };
