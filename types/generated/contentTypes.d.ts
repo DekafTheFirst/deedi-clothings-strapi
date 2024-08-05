@@ -879,7 +879,7 @@ export interface ApiCartCart extends Schema.CollectionType {
       'oneToOne',
       'plugin::users-permissions.user'
     >;
-    cart_items: Attribute.Relation<
+    items: Attribute.Relation<
       'api::cart.cart',
       'oneToMany',
       'api::cart-item.cart-item'
@@ -900,6 +900,7 @@ export interface ApiCartItemCartItem extends Schema.CollectionType {
     singularName: 'cart-item';
     pluralName: 'cart-items';
     displayName: 'CartItem';
+    description: '';
   };
   options: {
     draftAndPublish: true;
@@ -910,12 +911,13 @@ export interface ApiCartItemCartItem extends Schema.CollectionType {
       'oneToOne',
       'api::product.product'
     >;
-    quantity: Attribute.Integer & Attribute.Required & Attribute.DefaultTo<1>;
+    quantity: Attribute.Integer & Attribute.Required;
     cart: Attribute.Relation<
       'api::cart-item.cart-item',
       'manyToOne',
       'api::cart.cart'
     >;
+    size: Attribute.String & Attribute.Required;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;
@@ -1059,7 +1061,6 @@ export interface ApiProductProduct extends Schema.CollectionType {
   attributes: {
     title: Attribute.String & Attribute.Required;
     img: Attribute.Media;
-    img2: Attribute.Media;
     price: Attribute.Decimal;
     isNew: Attribute.Boolean & Attribute.DefaultTo<false>;
     categories: Attribute.Relation<
@@ -1073,8 +1074,6 @@ export interface ApiProductProduct extends Schema.CollectionType {
       'api::sub-category.sub-category'
     >;
     type: Attribute.Enumeration<['normal', 'featured', 'trending']>;
-    imgBlurred: Attribute.String;
-    img2Blurred: Attribute.String;
     discountedPrice: Attribute.Decimal;
     availableSizes: Attribute.Relation<
       'api::product.product',
@@ -1086,8 +1085,6 @@ export interface ApiProductProduct extends Schema.CollectionType {
     length: Attribute.Decimal;
     width: Attribute.Decimal;
     height: Attribute.Decimal;
-    stripeProductId: Attribute.String;
-    stripePriceId: Attribute.String;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;

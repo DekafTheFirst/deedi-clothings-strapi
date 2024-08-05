@@ -12,7 +12,7 @@ module.exports = {
     routes: [
         {
             method: "POST",
-            path: "/cart",
+            path: "/carts",
             handler: "cart.create",
             config: {
             },
@@ -22,10 +22,10 @@ module.exports = {
             path: '/carts',
             handler: 'cart.find',
             config: {
-              policies: [],
-              middlewares: [],
+                policies: [],
+                middlewares: [],
             },
-          },
+        },
     ],
 };
 

@@ -18,7 +18,7 @@
       "target": "plugin::users-permissions.user",
       "mappedBy": "cart"
     },
-    "cart_items": {
+    "items": {
       "type": "relation",
       "relation": "oneToMany",
       "target": "api::cart-item.cart-item",

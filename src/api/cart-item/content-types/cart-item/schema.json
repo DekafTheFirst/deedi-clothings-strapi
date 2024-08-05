@@ -4,7 +4,8 @@
   "info": {
     "singularName": "cart-item",
     "pluralName": "cart-items",
-    "displayName": "CartItem"
+    "displayName": "CartItem",
+    "description": ""
   },
   "options": {
     "draftAndPublish": true
@@ -18,14 +19,17 @@
     },
     "quantity": {
       "required": true,
-      "default": 1,
       "type": "integer"
     },
     "cart": {
       "type": "relation",
       "relation": "manyToOne",
       "target": "api::cart.cart",
-      "inversedBy": "cart_items"
+      "inversedBy": "items"
+    },
+    "size": {
+      "type": "string",
+      "required": true
     }
   }
 }

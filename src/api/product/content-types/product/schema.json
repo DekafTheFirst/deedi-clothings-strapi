@@ -27,17 +27,6 @@
         "audios"
       ]
     },
-    "img2": {
-      "type": "media",
-      "multiple": false,
-      "required": false,
-      "allowedTypes": [
-        "images",
-        "files",
-        "videos",
-        "audios"
-      ]
-    },
     "price": {
       "type": "decimal"
     },
@@ -65,12 +54,6 @@
         "trending"
       ]
     },
-    "imgBlurred": {
-      "type": "string"
-    },
-    "img2Blurred": {
-      "type": "string"
-    },
     "discountedPrice": {
       "type": "decimal"
     },
@@ -95,12 +78,6 @@
     },
     "height": {
       "type": "decimal"
-    },
-    "stripeProductId": {
-      "type": "string"
-    },
-    "stripePriceId": {
-      "type": "string"
     }
   }
 }
