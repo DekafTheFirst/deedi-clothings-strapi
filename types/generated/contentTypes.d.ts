@@ -918,6 +918,7 @@ export interface ApiCartItemCartItem extends Schema.CollectionType {
       'api::cart.cart'
     >;
     size: Attribute.String & Attribute.Required;
+    localCartItemId: Attribute.String;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;

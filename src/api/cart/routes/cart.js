@@ -26,6 +26,33 @@ module.exports = {
                 middlewares: [],
             },
         },
+        {
+            method: 'PUT',
+            path: '/carts/:cartId/items/:cartItemId',
+            handler: 'cart.updateCartItem',
+            config: {
+                policies: [],
+                middlewares: [],
+            },
+        },
+        {
+            method: 'POST',
+            path: '/carts/:cartId/items',
+            handler: 'cart.createCartItem',
+            config: {
+                policies: [],
+                middlewares: [],
+            },
+        },
+        {
+            method: 'DELETE',
+            path: '/carts/:cartId/items/:itemId',
+            handler: 'cart.removeItemFromCart',
+            config: {
+                policies: [],
+                middlewares: [],
+            },
+        },
     ],
 };
 
