@@ -1,3 +1,4 @@
+
 const { createCoreController } = require('@strapi/strapi').factories;
 
 module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
@@ -26,20 +27,203 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
     // Return the cart
     ctx.body = cart;
   },
-  async update(ctx) {
-    const { id } = ctx.params;
-    const { items } = ctx.request.body;
-    console.log("id", id)
+
+  async mergeCartItems(ctx) {
     try {
-      // Update the cart with new items
-      const updatedCart = await strapi.services.cart.update({ id }, { items });
+      const { cartId } = ctx.params;
+      const { items } = ctx.request.body;
+      console.log('local items', items)
+
+      // console.log('cartId', cartId)
+      // console.log('items', items);
+
+      // Fetch the current cart
+      const cart = await strapi.entityService.findOne('api::cart.cart', cartId, {
+        populate: ['items', 'items.product'],
+      });
+
+      console.log('cart', cart.items)
+
+      const createItemPromises = [];
+
+
+      // Merge items
+      const updatedItems = cart.items.map(item => {
+        const localItem = items.find(local => local.productId === item.product.id && local.size === item.size);
+        if (localItem) {
+          return {
+            id: item.id,
+            quantity: item.quantity + localItem.quantity,
+            product: item.product.id,
+            size: item.size,
+            localCartItemId: item.localCartItemId,
+            //Be careful with this line
+          };
+        }
+        return {
+          id: item.id,
+          size: item.size,
+          product: item.product.id,
+          localCartItemId: item.localCartItemId,
+          quantity: item.quantity,
+        };
+      });
+
+      console.log('updatedItemsBeforeMap', updatedItems)
+
+
+
+      for (const localItem of items) {
+        if (!updatedItems.find(item => item.product === localItem.productId && item.size === localItem.size)) {
+          // If item is not found in updatedItems, create it in Strapi
+          createItemPromises.push(
+            strapi.entityService.create('api::cart-item.cart-item', {
+              data: {
+                product: localItem.productId, // Ensure this matches the relationship key in Strapi
+                size: localItem.size,
+                quantity: localItem.quantity,
+                localCartItemId: localItem.localCartItemId,
+                cart: cartId,
+                publishedAt: new Date()// Link the cart item to the cart
+              },
+            })
+          );
+        }
+      }
+
+      // Await all create item promises
+      const createdItems = await Promise.all(createItemPromises);
+      if (createdItems) {
+        console.log('createdItems', createdItems)
+        createdItems.forEach(newItem => {
+          updatedItems.push({
+            id: newItem.id,
+            quantity: newItem.quantity,
+            size: newItem.size,
+            localCartItemId: newItem.localCartItemId
+          });
+        });
+      }
+      // Add newly created items to updatedItems
+
+
+
+      console.log('updatedItems', updatedItems)
+
+
+      // Update the cart with merged items
+      const updatedCart = await strapi.entityService.update('api::cart.cart', cartId, {
+        data: {
+          items: updatedItems.map(item => ({
+            id: item.id,
+            quantity: item.quantity,
+            size: item.size,
+            product: item.product
+          })),
+          publishedAt: new Date(),
+        },
+        populate: { items: true },
+      });
+
       console.log('updatedCart', updatedCart)
-      // Respond with updated cart
-      return ctx.send(updatedCart);
+
+
+
+      ctx.send(updatedCart);
     } catch (error) {
+      console.log(error)
       ctx.throw(500, error.message);
     }
   },
+
+  // async update(ctx) {
+  //   const { id } = ctx.params;
+  //   const { items } = ctx.request.body;
+  //   console.log("id", id)
+  //   try {
+  //     // Update the cart with new items
+  //     const updatedCart = await strapi.services.cart.update({ id }, { items });
+  //     console.log('updatedCart', updatedCart)
+  //     // Respond with updated cart
+  //     return ctx.send(updatedCart);
+  //   } catch (error) {
+  //     ctx.throw(500, error.message);
+  //   }
+  // },
+
+  async update(ctx) {
+    try {
+      const { id } = ctx.params; // Cart ID from the URL
+      const { items } = ctx.request.body; // Updated items from the request body
+      console.log('items', items)
+
+      // console.log('id', id)
+      if (!id || !Array.isArray(items)) {
+        return ctx.badRequest('Invalid input');
+      }
+
+      // Fetch the current cart with its items
+      const currentCart = await strapi.entityService.findOne('api::cart.cart', id, {
+        populate: ['items', 'items.product'],
+      });
+      console.log('currentCart', currentCart)
+
+
+      if (!currentCart) {
+        return ctx.notFound('Cart not found');
+      }
+
+    
+
+      // Prepare the data for updating items
+      const updatePromises = items.map(async (localItem) => {
+        const existingItemInCart = currentCart.items.find((cartItem) => cartItem.product.id == localItem.productId && cartItem.size === localItem.size)
+        if (existingItemInCart) {
+          console.log('match');
+          // Update existing localItem
+          return strapi.entityService.update('api::cart-item.cart-item', existingItemInCart.id, {
+            data: {
+              quantity: existingItemInCart.quantity + localItem.quantity,
+              size: localItem.size,
+              product: localItem.productId,
+            },
+          });
+        } else {
+          // Create new item if does not exist
+          const newItem = await strapi.entityService.create('api::cart-item.cart-item', {
+            data: {
+              quantity: localItem.quantity,
+              size: localItem.size,
+              product: localItem.productId,
+            },
+          });
+          // Attach the new item to the cart
+          await strapi.entityService.update('api::cart.cart', id, {
+            data: {
+              items: [...currentCart.items.map(item => item.id), newItem.id],
+            },
+          });
+        }
+      });
+
+      // Execute all update/create operations
+      await Promise.all(updatePromises);
+
+      // Fetch and return the updated cart
+      const updatedCart = await strapi.entityService.findOne('api::cart.cart', id, {
+        populate: { items: true },
+      });
+
+      console.log('updatedCart', updatedCart)
+
+
+      return ctx.send(updatedCart);
+    } catch (error) {
+      console.error('Error updating cart:', error);
+      return ctx.internalServerError('Error updating cart');
+    }
+  },
+
 
   async createCartItem(ctx) {
     const { cartId } = ctx.params;
@@ -90,7 +274,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
     const { cartId, cartItemId } = ctx.params;
     const { productId, quantity, size, localCartItemId } = ctx.request.body;
 
-    if (!cartId || !quantity ) {
+    if (!cartId || !quantity) {
       return ctx.badRequest('Missing required fields');
     }
 
@@ -114,7 +298,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
       });
 
       // console.log('updatedCartItem', updatedCartItem)
-      
+
 
       return ctx.send({ message: 'Item updated successfully', data: updatedCartItem });
 
