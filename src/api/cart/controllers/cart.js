@@ -44,7 +44,8 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
     try {
       const { id } = ctx.params; // Cart ID from the URL
       const { items } = ctx.request.body; // Updated items from the request body
-      console.log('items', items.map(item => ({ id: item.productId, size: item.size, quantity: item.quantity })))
+      // console.log('items', items.map(item=> ({id: item.productId, size: item.size, quantity: item.quantity })))
+      console.log('item', items[0])
 
       // console.log('id', id)
       if (!id || !Array.isArray(items)) {
@@ -55,6 +56,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
       const currentCart = await strapi.entityService.findOne('api::cart.cart', id, {
         populate: ['items', 'items.product'],
       });
+
       console.log('currentCart', currentCart.items.map(item => ({ id: item.product.id, size: item.size, quantity: item.quantity })))
 
 
@@ -104,11 +106,13 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
           items: {
             populate: {
               product: {
-                populate: ['img'],
-                fields: ['title', 'price', 'img']
-              }
-            }
-          }
+                populate: {
+                  img: true, // Populate the img field of the product
+                },
+                fields: ['title', 'price'], // Specify fields of the product
+              },
+            },
+          },
         },
       });
 
