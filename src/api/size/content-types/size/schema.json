@@ -16,11 +16,11 @@
       "type": "string",
       "required": true
     },
-    "products": {
+    "stocks": {
       "type": "relation",
-      "relation": "manyToMany",
-      "target": "api::product.product",
-      "mappedBy": "availableSizes"
+      "relation": "oneToMany",
+      "target": "api::stock.stock",
+      "mappedBy": "size"
     }
   }
 }

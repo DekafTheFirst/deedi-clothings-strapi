@@ -146,6 +146,21 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
         return ctx.notFound('Cart not found');
       }
 
+      const product = await strapi.db.query('api::product.product').findOne({
+        where: { id: productId },
+      });
+
+      if (!product) {
+        return ctx.notFound('Product not found');
+      }
+  
+      if (product.stock < quantity) {
+        return ctx.badRequest('Not enough stock available');
+      }
+
+      console.log('product',product)
+
+
       // Check if item already exists in the cart
       const existingItem = cart.items.find((item) => item.productId === productId && item.size === size);
 
@@ -213,7 +228,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
   async removeItemFromCart(ctx) {
     try {
       const { cartId, itemId } = ctx.params; // Assuming cartId and itemId are passed in the URL
-      console.log(cartId, itemId)
+      // console.log(cartId, itemId)
       // Find the cart
       const cart = await strapi.db.query('api::cart.cart').findOne({ where: { id: cartId } });
       if (!cart) {
@@ -225,7 +240,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
         where: { id: itemId, cart: cartId }
       });
 
-      console.log(cartItem)
+      // console.log(cartItem)
 
 
       if (!cartItem) {
@@ -238,7 +253,8 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
       });
 
       // Return a success message
-      return ctx.send({ message: 'Item removed successfully' });
+      // return ctx.send({ message: 'Item removed successfully' });
+      ctx.throw(500, `Failed to remove item from cart:`);
     } catch (error) {
       ctx.throw(500, `Failed to remove item from cart: ${error.message}`);
     }

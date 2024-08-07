@@ -1076,16 +1076,16 @@ export interface ApiProductProduct extends Schema.CollectionType {
     >;
     type: Attribute.Enumeration<['normal', 'featured', 'trending']>;
     discountedPrice: Attribute.Decimal;
-    availableSizes: Attribute.Relation<
-      'api::product.product',
-      'manyToMany',
-      'api::size.size'
-    >;
     desc: Attribute.Blocks;
     weight: Attribute.Decimal;
     length: Attribute.Decimal;
     width: Attribute.Decimal;
     height: Attribute.Decimal;
+    stocks: Attribute.Relation<
+      'api::product.product',
+      'oneToMany',
+      'api::stock.stock'
+    >;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;
@@ -1167,10 +1167,10 @@ export interface ApiSizeSize extends Schema.CollectionType {
   };
   attributes: {
     size: Attribute.String & Attribute.Required;
-    products: Attribute.Relation<
+    stocks: Attribute.Relation<
       'api::size.size',
-      'manyToMany',
-      'api::product.product'
+      'oneToMany',
+      'api::stock.stock'
     >;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
@@ -1178,6 +1178,43 @@ export interface ApiSizeSize extends Schema.CollectionType {
     createdBy: Attribute.Relation<'api::size.size', 'oneToOne', 'admin::user'> &
       Attribute.Private;
     updatedBy: Attribute.Relation<'api::size.size', 'oneToOne', 'admin::user'> &
+      Attribute.Private;
+  };
+}
+
+export interface ApiStockStock extends Schema.CollectionType {
+  collectionName: 'stocks';
+  info: {
+    singularName: 'stock';
+    pluralName: 'stocks';
+    displayName: 'Stock';
+    description: '';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    stock: Attribute.Integer & Attribute.Required & Attribute.DefaultTo<0>;
+    product: Attribute.Relation<
+      'api::stock.stock',
+      'manyToOne',
+      'api::product.product'
+    >;
+    size: Attribute.Relation<'api::stock.stock', 'manyToOne', 'api::size.size'>;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    publishedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::stock.stock',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      'api::stock.stock',
+      'oneToOne',
+      'admin::user'
+    > &
       Attribute.Private;
   };
 }
@@ -1289,6 +1326,7 @@ declare module '@strapi/types' {
       'api::product.product': ApiProductProduct;
       'api::shipping-address.shipping-address': ApiShippingAddressShippingAddress;
       'api::size.size': ApiSizeSize;
+      'api::stock.stock': ApiStockStock;
       'api::sub-category.sub-category': ApiSubCategorySubCategory;
       'api::wishlist.wishlist': ApiWishlistWishlist;
     }

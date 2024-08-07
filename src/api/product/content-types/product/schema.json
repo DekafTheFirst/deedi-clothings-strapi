@@ -57,12 +57,6 @@
     "discountedPrice": {
       "type": "decimal"
     },
-    "availableSizes": {
-      "type": "relation",
-      "relation": "manyToMany",
-      "target": "api::size.size",
-      "inversedBy": "products"
-    },
     "desc": {
       "type": "blocks",
       "required": false
@@ -78,6 +72,12 @@
     },
     "height": {
       "type": "decimal"
+    },
+    "stocks": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::stock.stock",
+      "mappedBy": "product"
     }
   }
 }
