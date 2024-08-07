@@ -44,7 +44,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
     try {
       const { id } = ctx.params; // Cart ID from the URL
       const { items } = ctx.request.body; // Updated items from the request body
-      console.log('items', items.map(item=> ({id: item.productId, size: item.size, quantity: item.quantity })))
+      console.log('items', items.map(item => ({ id: item.productId, size: item.size, quantity: item.quantity })))
 
       // console.log('id', id)
       if (!id || !Array.isArray(items)) {
@@ -87,6 +87,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
               product: localItem.productId,
               localCartItemId: localItem.localCartItemId,
               publishedAt: new Date(),
+              price: localItem.price,
               cart: id
             },
             populate: ['product', 'product.img']
@@ -99,7 +100,16 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
 
       // Fetch and return the updated cart
       const updatedCart = await strapi.entityService.findOne('api::cart.cart', id, {
-        populate: ['items', 'items.product', 'items.product.img'],
+        populate: {
+          items: {
+            populate: {
+              product: {
+                populate: ['img'],
+                fields: ['title', 'price', 'img']
+              }
+            }
+          }
+        },
       });
 
       console.log('updatedCart', updatedCart.items.map(item => ({ id: item.product.id, size: item.size, quantity: item.quantity })))
@@ -115,9 +125,9 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
 
   async createCartItem(ctx) {
     const { cartId } = ctx.params;
-    const { id, productId, quantity, size, localCartItemId } = ctx.request.body;
+    const { id, productId, quantity, size, localCartItemId, price } = ctx.request.body;
 
-    if (!cartId || !productId || !quantity || !size) {
+    if (!cartId || !productId || !quantity || !size || !price, !localCartItemId) {
       return ctx.badRequest('Missing required fields');
     }
 
@@ -145,7 +155,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
       } else {
         // Add new item
         const createdCartItem = await strapi.db.query('api::cart-item.cart-item').create({
-          data: { cart: cartId, product: productId, quantity, size, publishedAt: new Date(), localCartItemId },
+          data: { cart: cartId, product: productId, quantity, size, localCartItemId, price, publishedAt: new Date(), localCartItemId },
         });
 
         console.log('createdCartItem', createdCartItem)
