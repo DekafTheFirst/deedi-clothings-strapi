@@ -26,16 +26,7 @@ module.exports = {
                 middlewares: [],
             },
         },
-        {
-            method: 'PUT',
-            path: '/carts/:cartId/merge-items',
-            handler: 'cart.mergeCartItems',
-            config: {
-                auth: false,
-                policies: [],
-                middlewares: [],
-            },
-        },
+        
         {
             method: 'GET',
             path: '/carts',
