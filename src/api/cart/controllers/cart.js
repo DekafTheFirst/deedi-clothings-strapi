@@ -131,7 +131,9 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
   async addItemToCart(ctx) {
     const { cartId } = ctx.params;
     const { id, productId, quantity, size, localCartItemId, price } = ctx.request.body;
-    // console.log('size', size)
+
+    // console.log('body', ctx.request.body);
+
     if (!cartId || !productId || !quantity || !size || !price, !localCartItemId) {
       return ctx.badRequest('Missing required fields');
     }
@@ -140,8 +142,16 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
       // Find the cart
       const cart = await strapi.db.query('api::cart.cart').findOne({
         where: { id: cartId },
-        populate: { items: true },
+        populate: {
+          items: {
+            populate: ['product']
+          }
+        },
       });
+
+      // console.log('cart', cart.items)
+
+
 
       if (!cart) {
         return ctx.notFound('Cart not found');
@@ -156,32 +166,52 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
         return ctx.notFound('Product not found');
       }
 
-      
-      console.log('product',product)
 
-      const stockMap = new Map(
+      // console.log('product', product)
+
+      const productStock = new Map(
         product.stocks.map(stock => [stock.size.size, stock.stock])
       );
-      console.log('stockMap', stockMap)
-
-      if (stockMap.get(size) < quantity) {
-        return ctx.badRequest('Not enough stock available');
-      }
+      // console.log('productStock', productStock)
 
 
 
       // Check if item already exists in the cart
-      const existingItem = cart.items.find((item) => item.productId === productId && item.size === size);
+      const existingItem = cart.items.find((item) => item.product.id === productId && item.size === size);
 
       if (existingItem) {
+        // Check stock first
+        if (productStock.get(size) < quantity) {
+          const availableStock = productStock.get(size);
+
+          // Send error response with available stock included
+          return ctx.send({
+            message: 'Not enough stock available',
+            availableStock: availableStock
+          }, 400);
+        }
+
         // Update existing item
-        await strapi.db.query('api::cart-item.cart-item').updateMany({
+        const updatedItem = await strapi.db.query('api::cart-item.cart-item').update({
           where: { id: existingItem.id },
-          data: { quantity: quantity },
+          data: { quantity: existingItem.quantity + quantity },
         });
+
+        console.log('updatedItem', updatedItem)
+
         return ctx.send({ message: 'Item updated successfully' });
       } else {
-        // Add new item
+
+        // Check stock and maybe add new item
+        if (productStock.get(size) < quantity) {
+          const availableStock = productStock.get(size);
+
+          return ctx.send({
+            message: 'Not enough stock available',
+            availableStock: availableStock
+          }, 400);
+        }
+
         const createdCartItem = await strapi.db.query('api::cart-item.cart-item').create({
           data: { cart: cartId, product: productId, quantity, size, localCartItemId, price, publishedAt: new Date(), localCartItemId },
         });
@@ -229,7 +259,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
       return ctx.send({ message: 'Item updated successfully', data: updatedCartItem });
 
     } catch (error) {
-      strapi.log.error(error);
+      console.log(error);
       return ctx.internalServerError('Failed to update item');
     }
   },
