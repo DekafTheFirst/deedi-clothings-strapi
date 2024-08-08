@@ -1,6 +1,7 @@
 
 const { createCoreController } = require('@strapi/strapi').factories;
 
+
 module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
   async create(ctx) {
     const userId = ctx.request.body.userId
@@ -57,7 +58,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
         populate: ['items', 'items.product'],
       });
 
-      console.log('currentCart', currentCart.items.map(item => ({ id: item.product.id, size: item.size, quantity: item.quantity })))
+      console.log('currentCart', currentCart?.items?.map(item => ({ id: item.product.id, size: item.size, quantity: item.quantity })))
 
 
       if (!currentCart) {
@@ -253,8 +254,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
       });
 
       // Return a success message
-      // return ctx.send({ message: 'Item removed successfully' });
-      ctx.throw(500, `Failed to remove item from cart:`);
+      return ctx.send({ message: 'Item removed successfully' });
     } catch (error) {
       ctx.throw(500, `Failed to remove item from cart: ${error.message}`);
     }

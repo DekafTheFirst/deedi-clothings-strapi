@@ -1,4 +1,9 @@
 // src/api/stock/models/stock.js
+
+
+const utils = require('@strapi/utils');
+// const { ApplicationError } = errors;
+
 module.exports = {
     async beforeCreate(event) {
         console.log(event.params)
@@ -10,11 +15,11 @@ module.exports = {
         
 
         if (product?.connect?.length <= 0) {
-            throw new Error('Product is required.');
+            throw new utils.errors.ApplicationError('Product is required.', {foo: 'bar'});
         }
 
         if (size?.connect?.length <= 0) {
-            throw new Error('Size is required.');
+            throw new utils.errors.ApplicationError('Size is required.');
         }
 
 

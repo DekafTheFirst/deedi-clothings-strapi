@@ -14,6 +14,7 @@ module.exports = [
       multipart: true,
     }
   },
+  
   'strapi::session',
   'strapi::favicon',
   'strapi::public',
