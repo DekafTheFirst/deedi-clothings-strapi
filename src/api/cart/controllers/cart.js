@@ -130,7 +130,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
 
   async addItemToCart(ctx) {
     const { cartId } = ctx.params;
-    const { id, productId, quantity, size, localCartItemId, price } = ctx.request.body;
+    const { productId, quantity, size, localCartItemId, price } = ctx.request.body;
 
     // console.log('body', ctx.request.body);
 
@@ -151,8 +151,6 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
 
       // console.log('cart', cart.items)
 
-
-
       if (!cart) {
         return ctx.notFound('Cart not found');
       }
@@ -172,7 +170,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
       const productStock = new Map(
         product.stocks.map(stock => [stock.size.size, stock.stock])
       );
-      // console.log('productStock', productStock)
+      console.log('productStock', productStock)
 
 
 
@@ -192,13 +190,10 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
         }
 
         // Update existing item
-        const updatedItem = await strapi.db.query('api::cart-item.cart-item').update({
+        await strapi.db.query('api::cart-item.cart-item').update({
           where: { id: existingItem.id },
           data: { quantity: existingItem.quantity + quantity },
         });
-
-        console.log('updatedItem', updatedItem)
-
         return ctx.send({ message: 'Item updated successfully' });
       } else {
 
