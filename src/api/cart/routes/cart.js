@@ -48,7 +48,7 @@ module.exports = {
         {
             method: 'POST',
             path: '/carts/:cartId/items',
-            handler: 'cart.createCartItem',
+            handler: 'cart.addItemToCart',
             config: {
                 policies: [],
                 middlewares: [],

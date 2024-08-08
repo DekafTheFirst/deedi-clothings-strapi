@@ -951,7 +951,7 @@ export interface ApiCategoryCategory extends Schema.CollectionType {
   attributes: {
     title: Attribute.String;
     desc: Attribute.Text;
-    img: Attribute.Media;
+    img: Attribute.Media<'images' | 'files' | 'videos' | 'audios'>;
     products: Attribute.Relation<
       'api::category.category',
       'manyToMany',
@@ -1061,7 +1061,7 @@ export interface ApiProductProduct extends Schema.CollectionType {
   };
   attributes: {
     title: Attribute.String & Attribute.Required;
-    img: Attribute.Media;
+    img: Attribute.Media<'images' | 'files' | 'videos' | 'audios', true>;
     price: Attribute.Decimal;
     isNew: Attribute.Boolean & Attribute.DefaultTo<false>;
     categories: Attribute.Relation<

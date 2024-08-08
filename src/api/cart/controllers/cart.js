@@ -128,10 +128,10 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
   },
 
 
-  async createCartItem(ctx) {
+  async addItemToCart(ctx) {
     const { cartId } = ctx.params;
     const { id, productId, quantity, size, localCartItemId, price } = ctx.request.body;
-
+    // console.log('size', size)
     if (!cartId || !productId || !quantity || !size || !price, !localCartItemId) {
       return ctx.badRequest('Missing required fields');
     }
@@ -149,17 +149,25 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
 
       const product = await strapi.db.query('api::product.product').findOne({
         where: { id: productId },
+        populate: ['stocks', 'stocks.size'],
       });
 
       if (!product) {
         return ctx.notFound('Product not found');
       }
-  
-      if (product.stock < quantity) {
+
+      
+      console.log('product',product)
+
+      const stockMap = new Map(
+        product.stocks.map(stock => [stock.size.size, stock.stock])
+      );
+      console.log('stockMap', stockMap)
+
+      if (stockMap.get(size) < quantity) {
         return ctx.badRequest('Not enough stock available');
       }
 
-      console.log('product',product)
 
 
       // Check if item already exists in the cart
