@@ -55,7 +55,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
 
       // Fetch the current cart with its items
       const currentCart = await strapi.entityService.findOne('api::cart.cart', id, {
-        populate: ['items', 'items.product'],
+        populate: ['items', 'items.product', 'items.product.stocks.size'],
       });
 
       console.log('currentCart', currentCart?.items?.map(item => ({ id: item.product.id, size: item.size, quantity: item.quantity })))
@@ -69,9 +69,41 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
 
       // Prepare the data for updating items
       const updatePromises = items.map(async (localItem) => {
-        const existingItemInCart = currentCart.items.find((cartItem) => cartItem.product.id == localItem.productId && cartItem.size === localItem.size)
+        const existingItemInCart = currentCart.items.find((cartItem) => cartItem.product.id == localItem.productId && cartItem.size === localItem.size);
+
+
+        const product = await strapi.db.query('api::product.product').findOne({
+          where: { id: localItem.productId },
+          populate: ['stocks', 'stocks.size'],
+        });
+  
+        if (!product) {
+          return ctx.notFound('Product not found');
+        }
+
+        console.log('product', product)
+  
+  
+        // console.log('product', product)
+  
+        const productStock = new Map(
+          product.stocks.map(stock => [stock.size.size, stock.stock])
+        );
+
+        console.log('productStock', productStock)
+        
+
         if (existingItemInCart) {
           console.log('match');
+
+          if (productStock.get(size) < quantity) {
+            const availableStock = productStock.get(size);
+  
+            return ctx.send({
+              message: 'Not enough stock available',
+              availableStock: availableStock
+            }, 400);
+          }
           // Update existing localItem
           return await strapi.entityService.update('api::cart-item.cart-item', existingItemInCart.id, {
             data: {
@@ -83,6 +115,16 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
         } else {
           // Create new item if does not exist
           console.log('no match')
+
+          if (productStock.get(size) < quantity) {
+            const availableStock = productStock.get(size);
+  
+            return ctx.send({
+              message: 'Not enough stock available',
+              availableStock: availableStock
+            }, 400);
+          }
+          
           const newItem = await strapi.entityService.create('api::cart-item.cart-item', {
             data: {
               quantity: localItem.quantity,
