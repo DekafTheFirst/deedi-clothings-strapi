@@ -46,7 +46,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
       const { id } = ctx.params; // Cart ID from the URL
       const { items } = ctx.request.body; // Updated items from the request body
       // console.log('items', items.map(item=> ({id: item.productId, size: item.size, quantity: item.quantity })))
-      console.log('localItem', items[0])
+      // console.log('localItem', items[0])
 
       // console.log('id', id)
       if (!id || !Array.isArray(items)) {
@@ -58,7 +58,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
         populate: ['items', 'items.product', 'items.product.stocks.size'],
       });
 
-      console.log('currentCart', currentCart?.items?.map(item => ({ id: item.product.id, size: item.size, quantity: item.quantity })))
+      // console.log('currentCart', currentCart?.items?.map(item => ({ id: item.product.id, size: item.size, quantity: item.quantity })))
 
 
       if (!currentCart) {
@@ -83,7 +83,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
           return ctx.notFound('Product not found');
         }
 
-        console.log('product', product)
+        // console.log('product', product)
 
 
         // console.log('product', product)
@@ -92,26 +92,37 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
           product.stocks.map(stock => [stock.size.size, stock.stock])
         );
 
-        console.log('productStock', productStock)
+        console.log('productStock', productStock);
+
+        const availableStock = productStock.get(localItem.size);
 
 
-        if (productStock.get(localItem.size) < localItem.quantity) {
-          const availableStock = productStock.get(localItem.size);
-
-          return {
-            success: false,
-            localCartItemId: localItem.localCartItemId,
-            message: 'Not enough stock available',
-            availableStock,
-          };
+        if (availableStock < localItem.quantity) {
+          if (availableStock > 0) {
+            // Partial success: add only what's available
+            return {
+              status: 'partial',
+              productId: localItem.productId,
+              productTitle: product.title,
+              size: localItem.size, added:
+                availableStock,
+              reason: 'Limited stock'
+            };
+          } else {
+            // Failure: no stock available
+            return {
+              status: 'failed',
+              productId: localItem.productId,
+              productTitle: product.title,
+              size: localItem.size,
+              reason: 'Out of stock'
+            };
+          }
         }
-
-
 
         if (existingItemInCart) {
           console.log('existingItemInCart', existingItemInCart);
-
-
+          // Check Stock
           // Update existing localItem
           await strapi.entityService.update('api::cart-item.cart-item', existingItemInCart.id, {
             data: {
@@ -119,28 +130,14 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
               size: localItem.size,
               product: localItem.productId,
             },
-
-
           });
 
           return {
-            success: true,
+            status: 'success',
             localCartItemId: localItem.localCartItemId,
             id: existingItemInCart.id,
           }
         } else {
-
-          // Create new item if does not exist
-
-          // if (productStock.get(localItem.size) < localItem.quantity) {
-          //   const availableStock = productStock.get(localItem.size);
-
-          //   return ctx.send({
-          //     message: 'Not enough stock available',
-          //     availableStock: availableStock
-          //   }, 400);
-          // }
-
           const newItem = await strapi.entityService.create('api::cart-item.cart-item', {
             data: {
               quantity: localItem.quantity,
@@ -158,7 +155,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
 
 
           return {
-            success: true,
+            status: 'success',
             localCartItemId: localItem.localCartItemId,
             id: newItem.id,
           };
@@ -168,13 +165,23 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
       console.log('results', results)
 
 
-      const successResults = results.filter((result) => result.success);
-      const failedResults = results.filter((result) => !result.success);
+      const successResults = results.filter((result) => result.status === 'success');
+      const partials = results.filter((result) => result.status === 'partial');
+      const failedResults = results.filter((result) => result.status === 'failed');
+      
+      const mergedCart = await strapi.entityService.findOne('api::cart.cart', id, {
+        populate: ['items', 'items.product', 'items.product.img'],
+      });
+
+      console.log('mergedCart', mergedCart);
+
       // Fetch and return the updated cart
       const response = {
+
         message: 'Cart updated',
-        successes: successResults,
+        mergedCart: mergedCart.items,
         failures: failedResults,
+        partials: partials,
       };
 
       if (failedResults.length > 0) {
