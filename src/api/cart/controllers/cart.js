@@ -45,7 +45,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
     try {
       const { userId } = ctx.params; // Cart ID from the URL
       const { items } = ctx.request.body; // Updated items from the request body
-      // console.log('items', items.map(item=> ({id: item.productId, size: item.size, quantity: item.quantity })))
+      console.log('items', items.map(item => ({ id: item.productId, size: item.size, quantity: item.quantity })))
       // console.log('localItem', items[0])
 
       // console.log('id', id)
@@ -59,11 +59,11 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
         populate: ['items', 'items.product', 'items.product.stocks.size'],
       });
 
-      console.log('currentCart', currentCart)
-      
+      // console.log('currentCart', currentCart)
+
       const cartId = currentCart.id;
 
-      // console.log('currentCart', currentCart?.items?.map(item => ({ id: item.product.id, size: item.size, quantity: item.quantity })))
+      console.log('currentCart', currentCart?.items?.map(item => ({ id: item.product.id, size: item.size, quantity: item.quantity })))
 
 
       if (!currentCart) {
@@ -77,7 +77,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
       // Execute all update/create operations
       const results = await Promise.all(items.map(async (localItem) => {
         const existingItemInCart = currentCart.items.find((cartItem) => cartItem.product.id == localItem.productId && cartItem.size === localItem.size);
-
+        console.log('existingItemInCart', existingItemInCart)
 
         const product = await strapi.db.query('api::product.product').findOne({
           where: { id: localItem.productId },
@@ -102,15 +102,32 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
         const availableStock = productStock.get(localItem.size);
 
 
-        if (availableStock < localItem.quantity) {
+        if ((localItem.quantity + (existingItemInCart ? existingItemInCart?.quantity : 0)) > availableStock) {
           if (availableStock > 0) {
             // Partial success: add only what's available
+            if ((availableStock - existingItemInCart?.quantity) <= 0) {
+              return {
+                status: 'failed',
+                productId: localItem.productId,
+                productTitle: product.title,
+                size: localItem.size,
+                reason: `Max Stock Already In Cart`
+              };
+            }
+            await strapi.entityService.update('api::cart-item.cart-item', existingItemInCart.id, {
+              data: {
+                quantity: availableStock,
+                size: localItem.size,
+                product: localItem.productId,
+              },
+            });
+
             return {
               status: 'partial',
               productId: localItem.productId,
               productTitle: product.title,
-              size: localItem.size, added:
-                availableStock,
+              size: localItem.size,
+              added: availableStock - existingItemInCart.quantity,
               reason: 'Limited stock'
             };
           } else {
@@ -131,7 +148,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
           // Update existing localItem
           await strapi.entityService.update('api::cart-item.cart-item', existingItemInCart.id, {
             data: {
-              quantity: existingItemInCart.quantity + localItem.quantity,
+              quantity: existingItemInCart.quantity + (localItem.quantity),
               size: localItem.size,
               product: localItem.productId,
             },
@@ -173,12 +190,12 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
       const successResults = results.filter((result) => result.status === 'success');
       const partials = results.filter((result) => result.status === 'partial');
       const failedResults = results.filter((result) => result.status === 'failed');
-      
+
       const mergedCart = await strapi.entityService.findOne('api::cart.cart', cartId, {
         populate: ['items', 'items.product', 'items.product.img'],
       });
 
-      console.log('mergedCart', mergedCart);
+      console.log('mergedCart', mergedCart.items);
 
       // Fetch and return the updated cart
       const response = {
