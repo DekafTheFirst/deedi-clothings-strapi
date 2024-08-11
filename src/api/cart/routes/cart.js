@@ -19,8 +19,8 @@ module.exports = {
         },
         {
             method: 'PUT',
-            path: '/carts/:id',
-            handler: 'cart.update',
+            path: '/carts/fetchAndMergeCart/:userId',
+            handler: 'cart.fetchAndMergeCart',
             config: {
                 policies: [],
                 middlewares: [],

@@ -41,22 +41,27 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
 
 
 
-  async update(ctx) {
+  async fetchAndMergeCart(ctx) {
     try {
-      const { id } = ctx.params; // Cart ID from the URL
+      const { userId } = ctx.params; // Cart ID from the URL
       const { items } = ctx.request.body; // Updated items from the request body
       // console.log('items', items.map(item=> ({id: item.productId, size: item.size, quantity: item.quantity })))
       // console.log('localItem', items[0])
 
       // console.log('id', id)
-      if (!id || !Array.isArray(items)) {
+      if (!userId || !Array.isArray(items)) {
         return ctx.badRequest('Invalid input');
       }
 
       // Fetch the current cart with its items
-      const currentCart = await strapi.entityService.findOne('api::cart.cart', id, {
+      let currentCart = await strapi.db.query('api::cart.cart').findOne({
+        where: { user: userId }, // Properly query the relational user field
         populate: ['items', 'items.product', 'items.product.stocks.size'],
       });
+
+      console.log('currentCart', currentCart)
+      
+      const cartId = currentCart.id;
 
       // console.log('currentCart', currentCart?.items?.map(item => ({ id: item.product.id, size: item.size, quantity: item.quantity })))
 
@@ -146,7 +151,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
               localCartItemId: localItem.localCartItemId,
               publishedAt: new Date(),
               price: localItem.price,
-              cart: id
+              cart: cartId
             },
             populate: ['product', 'product.img']
           });
@@ -169,7 +174,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
       const partials = results.filter((result) => result.status === 'partial');
       const failedResults = results.filter((result) => result.status === 'failed');
       
-      const mergedCart = await strapi.entityService.findOne('api::cart.cart', id, {
+      const mergedCart = await strapi.entityService.findOne('api::cart.cart', cartId, {
         populate: ['items', 'items.product', 'items.product.img'],
       });
 
@@ -178,7 +183,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
       // Fetch and return the updated cart
       const response = {
 
-        message: 'Cart updated',
+        message: 'Cart merged',
         mergedCart: mergedCart.items,
         failures: failedResults,
         partials: partials,
