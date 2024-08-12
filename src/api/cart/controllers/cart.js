@@ -70,8 +70,6 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
         return ctx.notFound('Cart not found');
       }
 
-
-
       // Prepare the data for updating items
 
       // Execute all update/create operations
@@ -100,67 +98,138 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
         console.log('productStock', productStock);
 
         const availableStock = productStock.get(localItem.size);
-        
+        const totalQuantityInCart = existingItemInCart ? existingItemInCart.quantity : 0;
 
-        if ((localItem.quantity + (existingItemInCart ? existingItemInCart?.quantity : 0)) > availableStock) {
-          if (availableStock > 0) {
-            // Partial success: add only what's available
-            if ((availableStock - existingItemInCart?.quantity) <= 0) {
+
+        const handleStockCheck = () => {
+          switch (true) {
+            case (availableStock <= 0):
+              return { status: 'failed', productId: localItem.productId, reason: 'Out of stock' };
+
+            // case (totalQuantityInCart > availableStock):
+            //   console.log('exceeded')
+            //   return {
+            //     status: 'reduced',
+            //     productId: localItem.productId,
+            //     removed: totalQuantityInCart - availableStock,
+            //     reason: 'Limited Stock'
+            //   };
+
+            case ((localItem.quantity + totalQuantityInCart) > availableStock):
+              if (availableStock - totalQuantityInCart <= 0) {
+                return { status: 'failed', productId: localItem.productId, reason: 'Max stock already in cart' };
+              }
               return {
-                status: 'failed',
+                status: 'partial',
                 productId: localItem.productId,
-                productTitle: product.title,
-                size: localItem.size,
-                reason: `Max Stock Already In Cart`
+                added: availableStock - totalQuantityInCart,
+                reason: 'Limited stock'
               };
-            }
 
-            if (existingItemInCart) {
-              await strapi.entityService.update('api::cart-item.cart-item', existingItemInCart?.id, {
-                data: {
-                  quantity: availableStock,
-                  size: localItem.size,
-                  product: localItem.productId,
-                },
-              });
-            }
-            else {
-              const newItem = await strapi.entityService.create('api::cart-item.cart-item', {
-                data: {
-                  quantity: localItem.quantity,
-                  size: localItem.size,
-                  product: localItem.productId,
-                  localCartItemId: localItem.localCartItemId,
-                  publishedAt: new Date(),
-                  price: localItem.price,
-                  cart: cartId
-                },
-                populate: ['product', 'product.img']
-              });
-
-              console.log('createdItem', newItem);
-            }
-
-
-            return {
-              status: 'partial',
-              productId: localItem.productId,
-              productTitle: product.title,
-              size: localItem.size,
-              added: availableStock - (existingItemInCart ? existingItemInCart?.quantity : 0),
-              reason: 'Limited stock'
-            };
-          } else {
-            // Failure: no stock available
-            return {
-              status: 'failed',
-              productId: localItem.productId,
-              productTitle: product.title,
-              size: localItem.size,
-              reason: 'Out of stock'
-            };
+            default:
+              return { status: 'success' };
           }
+        };
+
+        const stockCheckResult = handleStockCheck();
+        console.log('stockCheckResult', stockCheckResult)
+
+        if (stockCheckResult.status === 'failed') {
+          return {
+            ...stockCheckResult,
+            size: localItem.size,
+            productTitle: product.title
+          };
         }
+
+        if (stockCheckResult.status === 'partial') {
+          await strapi.entityService.update('api::cart-item.cart-item', existingItemInCart ? existingItemInCart.id : undefined, {
+            data: {
+              quantity: stockCheckResult.added + totalQuantityInCart,
+              size: localItem.size,
+              product: localItem.productId,
+            }
+          });
+          return {
+            ...stockCheckResult,
+            size: localItem.size,
+            productTitle: product.title
+          };
+        }
+
+        if (stockCheckResult.status === 'reduced') {
+          await strapi.entityService.update('api::cart-item.cart-item', existingItemInCart ? existingItemInCart.id : undefined, {
+            data: {
+              quantity: availableStock,
+              size: localItem.size,
+              product: localItem.productId,
+            }
+          });
+          return {
+            ...stockCheckResult,
+            size: localItem.size,
+            productTitle: product.title
+          };
+        }
+        // if ((localItem.quantity + (existingItemInCart ? existingItemInCart?.quantity : 0)) > availableStock) {
+        //   if (availableStock > 0) {
+        //     // Partial success: add only what's available
+        //     if ((availableStock - existingItemInCart?.quantity) <= 0) {
+        //       return {
+        //         status: 'failed',
+        //         productId: localItem.productId,
+        //         productTitle: product.title,
+        //         size: localItem.size,
+        //         reason: `Max Stock Already In Cart`
+        //       };
+        //     }
+
+        //     if (existingItemInCart) {
+        //       await strapi.entityService.update('api::cart-item.cart-item', existingItemInCart?.id, {
+        //         data: {
+        //           quantity: availableStock,
+        //           size: localItem.size,
+        //           product: localItem.productId,
+        //         },
+        //       });
+        //     }
+        //     else {
+        //       const newItem = await strapi.entityService.create('api::cart-item.cart-item', {
+        //         data: {
+        //           quantity: localItem.quantity,
+        //           size: localItem.size,
+        //           product: localItem.productId,
+        //           localCartItemId: localItem.localCartItemId,
+        //           publishedAt: new Date(),
+        //           price: localItem.price,
+        //           cart: cartId
+        //         },
+        //         populate: ['product', 'product.img']
+        //       });
+
+        //       console.log('createdItem', newItem);
+        //     }
+
+
+        //     return {
+        //       status: 'partial',
+        //       productId: localItem.productId,
+        //       productTitle: product.title,
+        //       size: localItem.size,
+        //       added: availableStock - (existingItemInCart ? existingItemInCart?.quantity : 0),
+        //       reason: 'Limited stock'
+        //     };
+        //   } else {
+        //     // Failure: no stock available
+        //     return {
+        //       status: 'failed',
+        //       productId: localItem.productId,
+        //       productTitle: product.title,
+        //       size: localItem.size,
+        //       reason: 'Out of stock'
+        //     };
+        //   }
+        // }
 
         if (existingItemInCart) {
           console.log('existingItemInCart', existingItemInCart);
@@ -210,7 +279,8 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
       const successResults = results.filter((result) => result.status === 'success');
       const partials = results.filter((result) => result.status === 'partial');
       const failedResults = results.filter((result) => result.status === 'failed');
-
+      const reducedResults = results.filter((result) => result.status === 'reduced');
+      console.log('reducedResults', reducedResults)
       const mergedCart = await strapi.entityService.findOne('api::cart.cart', cartId, {
         populate: ['items', 'items.product', 'items.product.img'],
       });
@@ -224,6 +294,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
         mergedCart: mergedCart.items,
         failures: failedResults,
         partials: partials,
+        reduced: reducedResults,
       };
 
       if (failedResults.length > 0) {
