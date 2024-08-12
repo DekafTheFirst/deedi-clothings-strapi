@@ -100,7 +100,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
         console.log('productStock', productStock);
 
         const availableStock = productStock.get(localItem.size);
-
+        
 
         if ((localItem.quantity + (existingItemInCart ? existingItemInCart?.quantity : 0)) > availableStock) {
           if (availableStock > 0) {
@@ -114,20 +114,40 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
                 reason: `Max Stock Already In Cart`
               };
             }
-            await strapi.entityService.update('api::cart-item.cart-item', existingItemInCart.id, {
-              data: {
-                quantity: availableStock,
-                size: localItem.size,
-                product: localItem.productId,
-              },
-            });
+
+            if (existingItemInCart) {
+              await strapi.entityService.update('api::cart-item.cart-item', existingItemInCart?.id, {
+                data: {
+                  quantity: availableStock,
+                  size: localItem.size,
+                  product: localItem.productId,
+                },
+              });
+            }
+            else {
+              const newItem = await strapi.entityService.create('api::cart-item.cart-item', {
+                data: {
+                  quantity: localItem.quantity,
+                  size: localItem.size,
+                  product: localItem.productId,
+                  localCartItemId: localItem.localCartItemId,
+                  publishedAt: new Date(),
+                  price: localItem.price,
+                  cart: cartId
+                },
+                populate: ['product', 'product.img']
+              });
+
+              console.log('createdItem', newItem);
+            }
+
 
             return {
               status: 'partial',
               productId: localItem.productId,
               productTitle: product.title,
               size: localItem.size,
-              added: availableStock - existingItemInCart.quantity,
+              added: availableStock - (existingItemInCart ? existingItemInCart?.quantity : 0),
               reason: 'Limited stock'
             };
           } else {
