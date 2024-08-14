@@ -47,7 +47,7 @@ module.exports = {
         },
         {
             method: 'POST',
-            path: '/carts/:cartId/items',
+            path: '/carts/addItem',
             handler: 'cart.addItemToCart',
             config: {
                 policies: [],
