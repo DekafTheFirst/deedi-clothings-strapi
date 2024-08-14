@@ -351,7 +351,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
         // Send error response with available stock included
         return ctx.send({
           message: 'Out of stock',
-          status: 'failure'
+          status: 'out-of-stock'
         }, 400);
       }
       else {
@@ -364,10 +364,10 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
 
           const cartId = cart?.id
           const existingItem = cart?.items?.find((item) => item.product.id === productId && item.size === size);
+          const notEnoughStock = availableStock < (quantity + (existingItem?.quantity || 0));
 
           if (existingItem) {
             // Check stock first
-            const notEnoughStock = availableStock < (quantity + existingItem.quantity);
             console.log('existingItem', existingItem)
             // Update existing item
 
@@ -398,7 +398,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
 
 
                 return ctx.send({
-                  message: "Reduced to available stock",
+                  message: "Limited Stock",
                   status: 'reduced',
                   reducedBy: existingItem.quantity - availableStock,
                   newQuantity: availableStock,
@@ -459,13 +459,13 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
           if (existingQuantityAlreadyMax) {
             return ctx.send({
               message: 'All available stock already in cart',
-              status: 'failure'
+              status: 'max-stock'
             }, 400);
           }
 
           else if (existingExceedsAvailable) {
             return ctx.send({
-              message: "Reduced to available stock",
+              message: "Limited Stock",
               status: 'reduced',
               reducedBy: localExistingItemQuantity - availableStock,
               newQuantity: availableStock,
