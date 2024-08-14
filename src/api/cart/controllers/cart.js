@@ -49,7 +49,12 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
       // console.log('localItem', items[0])
 
       // console.log('id', id)
-      if (!userId || !Array.isArray(items)) {
+      if (!userId) {
+        return ctx.unauthorized('User is not authenticated');
+      }
+
+      // Step 2: Validate Input
+      if (!Array.isArray(items)) {
         return ctx.badRequest('Invalid input');
       }
 
