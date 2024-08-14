@@ -315,9 +315,9 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
 
 
   async addItemToCart(ctx) {
-    const { productId, quantity, size, localCartItemId, price, userId } = ctx.request.body;
+    const { productId, quantity, size, localCartItemId, localExistingItemQuantity, price, userId } = ctx.request.body;
 
-    console.log('quantity', quantity);
+    console.log({quantity, size});
 
     if (!productId || !quantity || !size || !price || !localCartItemId) {
       return ctx.badRequest('Missing required fields');
@@ -344,71 +344,160 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
       );
       console.log('productStock', productStock)
 
+      const availableStock = productStock?.get(size);
 
-      if (productStock.get(size) < quantity) {
-        const availableStock = productStock.get(size);
 
+      if (availableStock === 0) {
         // Send error response with available stock included
-        if (availableStock > 0) {
-          return ctx.send({
-            message: 'Not enough stock available',
-            availableStock: availableStock
-          }, 400);
-        }
+        return ctx.send({
+          message: 'Out of stock',
+          status: 'failure'
+        }, 400);
+      }
+      else {
+        if (userId) {
+          const cart = await strapi.db.query('api::cart.cart').findOne({
+            where: { user: userId }, // Properly query the relational user field
+            populate: ['items', 'items.product', 'items.product.stocks.size'],
+          });
 
+
+          const cartId = cart?.id
+          const existingItem = cart?.items?.find((item) => item.product.id === productId && item.size === size);
+
+          if (existingItem) {
+            // Check stock first
+            const notEnoughStock = availableStock < (quantity + existingItem.quantity);
+            console.log('existingItem', existingItem)
+            // Update existing item
+
+            // Check whether item's current qty is greater than available stock
+            const exceedsAvailableStock = existingItem.quantity > availableStock;
+            let updatedItem;
+
+            switch (true) {
+              case (notEnoughStock && !exceedsAvailableStock):
+                updatedItem = await strapi.db.query('api::cart-item.cart-item').update({
+                  where: { id: existingItem.id },
+                  data: { quantity: availableStock },
+                });
+
+
+                return ctx.send({
+                  message: "Limted Stock",
+                  status: 'partial',
+                  added: availableStock - existingItem.quantity,
+                  newQuantity: availableStock,
+                }, 206);
+
+              case (exceedsAvailableStock):
+                updatedItem = await strapi.db.query('api::cart-item.cart-item').update({
+                  where: { id: existingItem.id },
+                  data: { quantity: availableStock },
+                });
+
+
+                return ctx.send({
+                  message: "Reduced to available stock",
+                  status: 'reduced',
+                  reducedBy: existingItem.quantity - availableStock,
+                  newQuantity: availableStock,
+                  availableStock,
+                }, 206);
+              default:
+                updatedItem = await strapi.db.query('api::cart-item.cart-item').update({
+                  where: { id: existingItem.id },
+                  data: { quantity: existingItem.quantity + quantity },
+                });
+
+                return ctx.send({
+                  message: 'Item updated successfully',
+                  status: 'success',
+                }, 200);
+            }
+
+
+
+
+
+          }
+          else {
+            if (notEnoughStock) {
+              const createdCartItem = await strapi.db.query('api::cart-item.cart-item').create({
+                data: { cart: cartId, product: productId, quantity: availableStock, size, localCartItemId, price, publishedAt: new Date(), localCartItemId },
+              });
+
+              console.log('createdCartItem', createdCartItem)
+              return ctx.send(
+                {
+                  message: 'Limited Stock',
+                  data: createdCartItem,
+                  availableStock,
+                  status: 'partial'
+                }, 206);
+            }
+            else {
+              const createdCartItem = await strapi.db.query('api::cart-item.cart-item').create({
+                data: { cart: cartId, product: productId, quantity: quantity, size, localCartItemId, price, publishedAt: new Date(), localCartItemId },
+              });
+
+              console.log('createdCartItem', createdCartItem)
+              return ctx.send({ message: 'Successfully Added', data: createdCartItem });
+            }
+          }
+        }
         else {
-          return ctx.send({
-            message: 'Out of stock',
-          }, 400);
+          // For Unauthenticated Users
+          console.log('localExistingItemQuantity', localExistingItemQuantity)
+          const notEnoughStock = availableStock < (quantity + localExistingItemQuantity);
+          const existingExceedsAvailable = localExistingItemQuantity > availableStock;
+          const existingQuantityAlreadyMax = localExistingItemQuantity === availableStock;
+          console.log('existingQuantityAlreadyMax', existingQuantityAlreadyMax);
+
+
+
+          if (existingQuantityAlreadyMax) {
+            return ctx.send({
+              message: 'All available stock already in cart',
+              status: 'failure'
+            }, 400);
+          }
+
+          else if (existingExceedsAvailable) {
+            return ctx.send({
+              message: "Reduced to available stock",
+              status: 'reduced',
+              reducedBy: localExistingItemQuantity - availableStock,
+              newQuantity: availableStock,
+              availableStock
+            }, 206);
+          }
+
+          else if (notEnoughStock) {
+            return ctx.send({
+              message: 'Limited Stock',
+              status: 'partial',
+              added: availableStock - localExistingItemQuantity,
+              newQuantity: availableStock,
+            }, 206);
+          }
+
+          else {
+            if (localExistingItemQuantity <= 0) {
+              return ctx.send({ message: 'Allowed to add', status: 'success' });
+            }
+            else {
+              return ctx.send({ message: 'Allowed to update', status: 'success' });
+            }
+          }
         }
       }
 
 
       // Check if item already exists in the cart
-      let cart
-      if (userId) {
-        cart = await strapi.db.query('api::cart.cart').findOne({
-          where: { user: userId },
-          populate: {
-            items: {
-              populate: ['product']
-            }
-          },
-        });
-        console.log('cart', cart?.items)
-      }
 
 
-      
-      if (cart) {
-        const cartId = cart?.id
-        const existingItem = cart?.items?.find((item) => item.product.id === productId && item.size === size);
 
-        if (existingItem) {
-          // Check stock first
-          console.log('existingItem', existingItem)
-          // Update existing item
-          await strapi.db.query('api::cart-item.cart-item').update({
-            where: { id: existingItem.id },
-            data: { quantity: existingItem.quantity + quantity },
-          });
-          return ctx.send({ message: 'Item updated successfully' });
-        } else {
-
-          // Check stock and maybe add new item
-
-          const createdCartItem = await strapi.db.query('api::cart-item.cart-item').create({
-            data: { cart: cartId, product: productId, quantity, size, localCartItemId, price, publishedAt: new Date(), localCartItemId },
-          });
-
-          console.log('createdCartItem', createdCartItem)
-
-          return ctx.send({ message: 'Item added successfully', data: createdCartItem });
-        }
-      }
-      else {
-        return ctx.send({ message: 'Item added successfully' });
-      }
     } catch (error) {
       strapi.log.error(error);
       return ctx.internalServerError('Failed to add or update item');
