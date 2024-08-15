@@ -919,6 +919,7 @@ export interface ApiCartItemCartItem extends Schema.CollectionType {
     >;
     size: Attribute.String & Attribute.Required;
     localCartItemId: Attribute.String;
+    outOfStock: Attribute.Boolean;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;

@@ -34,6 +34,9 @@
     },
     "localCartItemId": {
       "type": "string"
+    },
+    "outOfStock": {
+      "type": "boolean"
     }
   }
 }
