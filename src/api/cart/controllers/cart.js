@@ -317,7 +317,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
   async addItemToCart(ctx) {
     const { productId, quantity, size, localCartItemId, localExistingItemQuantity, price, userId } = ctx.request.body;
 
-    console.log({quantity, size});
+    console.log({ quantity, size });
 
     if (!productId || !quantity || !size || !price || !localCartItemId) {
       return ctx.badRequest('Missing required fields');
@@ -382,14 +382,24 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
                   data: { quantity: availableStock },
                 });
 
+                const added = availableStock - existingItem.quantity;
 
-                return ctx.send({
-                  message: "Limted Stock",
-                  status: 'partial',
-                  added: availableStock - existingItem.quantity,
-                  newQuantity: availableStock,
-                }, 206);
-
+                if (added > 0) {
+                  return ctx.send({
+                    message: "Limted Stock",
+                    status: 'partial',
+                    added,
+                    newQuantity: availableStock,
+                  }, 206);
+                }
+                else {
+                  return ctx.send({
+                    message: "Limted Stock",
+                    status: 'failure',
+                    added,
+                    newQuantity: availableStock,
+                  }, 400);
+                }
               case (exceedsAvailableStock):
                 updatedItem = await strapi.db.query('api::cart-item.cart-item').update({
                   where: { id: existingItem.id },
@@ -442,7 +452,11 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
               });
 
               console.log('createdCartItem', createdCartItem)
-              return ctx.send({ message: 'Successfully Added', data: createdCartItem });
+              return ctx.send({
+                message: 'Successfully Added',
+                data: createdCartItem,
+                status: 'success',
+              });
             }
           }
         }
