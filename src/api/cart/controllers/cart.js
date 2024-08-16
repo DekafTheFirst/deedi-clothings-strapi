@@ -102,7 +102,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
 
         if (availableStock <= 0) {
           await strapi.entityService.update('api::cart-item.cart-item', existingItem.id, {
-            data: {outOfStock: true},
+            data: { outOfStock: true },
           });
 
           return {
@@ -378,7 +378,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
         return ctx.send({
           message: 'Out of stock',
           status: 'out-of-stock',
-        
+
         }, 400);
       }
       else if (availableStock === existingLocalCartItemQty) {
@@ -506,36 +506,121 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
   },
 
   async updateCartItem(ctx) {
-    const { cartId, cartItemId } = ctx.params;
-    const { productId, quantity, size, localCartItemId } = ctx.request.body;
+    const { productId, existingLocalCartItemQty, size, localCartItemId, userId } = ctx.request.body;
 
-    if (!cartId || !quantity) {
+    if (!quantity || !localCartItemId || !size) {
       return ctx.badRequest('Missing required fields');
     }
 
-    try {
-      // Find the cart
-      const cart = await strapi.db.query('api::cart.cart').findOne({
-        where: { id: cartId },
-        populate: { items: true },
-      });
 
-      if (!cart) {
-        return ctx.notFound('Cart not found');
+    const existingStrapiCartItem = userId && strapi.db.query("api::cart-item.cart-item").findOne({
+      where: { localCartItemId },
+    })
+
+    // const availableStock = strapi.db.query("api:stock.stock").findOne({
+    //   where: {size}
+    // })
+
+    console.log('existingStrapiCartItem', existingStrapiCartItem)
+
+    const availableStock = 0;
+    const userIsAuthenticated = userId ? true : false
+    try {
+      if (availableStock <= 0) {
+        // Send error response with available stock included
+        if (userIsAuthenticated) {
+          const updatedItem = await strapi.db.query('api::cart-item.cart-item').update({
+            where: { id: existingStrapiCartItem.id },
+            data: { outOfStock: true },
+          });
+        }
+
+        return ctx.send({
+          message: 'Out of stock',
+          status: 'out-of-stock',
+
+        }, 400);
+      }
+      else if (availableStock === existingLocalCartItemQty) {
+        return ctx.send({
+          message: 'Available Stock Already In Your Cart',
+          status: 'max-stock-already',
+          availableStock: availableStock,
+          localCartItemId
+        }, 400);
+      }
+      else {
+        // Check stock first
+        // Update existing item
+        // Check whether item's current qty is greater than available stock
+        const currentQtyExeedsLimit = existingLocalCartItemQty > availableStock;
+        let updatedItem;
+
+        switch (true) {
+          // case (limitedStock && !currentQtyExeedsLimit):
+          //   if (userIsAuthenticated) {
+          //     updatedItem = await strapi.db.query('api::cart-item.cart-item').update({
+          //       where: { id: existingStrapiCartItem.id },
+          //       data: { quantity: availableStock },
+          //     });
+          //   }
+          //   const added = availableStock - existingLocalCartItemQty;
+
+          //   if (added > 0) {
+          //     return ctx.send({
+          //       message: "Limted Stock",
+          //       status: 'partial',
+          //       added,
+          //       newQuantity: availableStock,
+          //     }, 206);
+          //   }
+          //   else {
+          //     return ctx.send({
+          //       message: "Limted Stock",
+          //       status: 'max-stock-already',
+          //       added,
+          //       newQuantity: availableStock,
+          //     }, 400);
+          //   }
+          case (currentQtyExeedsLimit):
+            if (userIsAuthenticated) {
+              updatedItem = await strapi.db.query('api::cart-item.cart-item').update({
+                where: { id: existingStrapiCartItem.id },
+                data: { quantity: availableStock },
+              });
+            }
+
+
+            return ctx.send({
+              message: "Limited Stock",
+              status: 'reduced',
+              reducedBy: existingLocalCartItemQty - availableStock,
+              newQuantity: availableStock,
+              availableStock,
+            }, 206);
+          default:
+            if (userIsAuthenticated) {
+              updatedItem = await strapi.db.query('api::cart-item.cart-item').update({
+                where: { id: existingStrapiCartItem.id },
+                data: { requestedQuantity: existingLocalCartItemQty },
+              });
+            }
+
+            return ctx.send({ message: 'Allowed to update', status: 'success' });
+        }
       }
 
-      // Check if item already exists in the cart
+      // // Find the cart
+      // // Check if item already exists in the cart
 
-      // Update existing item
-      const updatedCartItem = await strapi.db.query('api::cart-item.cart-item').update({
-        where: { id: cartItemId },
-        data: { quantity: quantity },
-      });
+      // // Update existing item
+      // const updatedCartItem = await strapi.db.query('api::cart-item.cart-item').update({
+      //   where: { id: cartItemId, localCartItemId },
+      //   data: { quantity: quantity },
+      // });
 
-      // console.log('updatedCartItem', updatedCartItem)
-
-
-      return ctx.send({ message: 'Item updated successfully', data: updatedCartItem });
+      // // console.log('updatedCartItem', updatedCartItem);
+      // return ctx.send({ message: 'Item updated successfully', data: updatedCartItem });
 
     } catch (error) {
       console.log(error);
