@@ -28,15 +28,16 @@
       "target": "api::cart.cart",
       "inversedBy": "items"
     },
-    "size": {
-      "type": "string",
-      "required": true
-    },
     "localCartItemId": {
       "type": "string"
     },
     "outOfStock": {
       "type": "boolean"
+    },
+    "size": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::size.size"
     }
   }
 }

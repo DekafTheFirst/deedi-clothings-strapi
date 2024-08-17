@@ -917,9 +917,13 @@ export interface ApiCartItemCartItem extends Schema.CollectionType {
       'manyToOne',
       'api::cart.cart'
     >;
-    size: Attribute.String & Attribute.Required;
     localCartItemId: Attribute.String;
     outOfStock: Attribute.Boolean;
+    size: Attribute.Relation<
+      'api::cart-item.cart-item',
+      'oneToOne',
+      'api::size.size'
+    >;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;

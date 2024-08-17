@@ -61,7 +61,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
       // Fetch the current cart with its items
       let currentCart = await strapi.db.query('api::cart.cart').findOne({
         where: { user: userId }, // Properly query the relational user field
-        populate: ['items', 'items.product', 'items.product.stocks.size'],
+        populate: ['items', 'items.product', 'items.size', 'items.product.stocks.size'],
       });
 
       // console.log('currentCart', currentCart)
@@ -79,9 +79,10 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
       const existingItemsStockCheck = await Promise.all(currentCart.items.map(async (existingItem) => {
 
         const stock = await strapi.db.query('api::stock.stock').findOne({
-          where: { product: existingItem.product.id, size: { size: existingItem.size } },
+          where: { product: existingItem.product.id, size: existingItem.size.id },
           populate: ['size']
         });
+
         console.log('stock', stock)
 
         const availableStock = stock.stock
@@ -96,7 +97,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
             status: 'out-of-stock',
             productId: existingItem.product.id,
             productTitle: existingItem.product.title,
-            size: stock.size,
+            size: existingItem.size,
             reason: 'Out Of Stock',
           };
         }
@@ -112,7 +113,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
             status: 'reduced',
             productId: existingItem.product.id,
             productTitle: existingItem.product.title,
-            size: stock.size,
+            size: existingItem.size,
             removed: totalQuantityInCart - availableStock,
             reason: 'Limited Stock'
           };
@@ -131,30 +132,17 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
 
       // Execute all update/create operations
       const results = await Promise.all(items.map(async (localItem) => {
-        const existingItemInCart = currentCart.items.find((cartItem) => cartItem.product.id == localItem.productId && cartItem.size === localItem.size.size);
+        const existingItemInCart = currentCart.items.find((cartItem) => cartItem.product.id == localItem.productId && cartItem.size.id === localItem.size.id);
         console.log('existingItemInCart', existingItemInCart)
 
-        const product = await strapi.db.query('api::product.product').findOne({
-          where: { id: localItem.productId },
-          populate: ['stocks', 'stocks.size'],
+        const stock = await strapi.db.query('api::stock.stock').findOne({
+          where: { product: localItem.productId, size: localItem.size.id },
+          populate: ['size']
         });
 
-        if (!product) {
-          return ctx.notFound('Product not found');
-        }
+        console.log('stock', stock)
 
-        // console.log('product', product)
-
-
-        // console.log('product', product)
-
-        const productStock = new Map(
-          product.stocks.map(stock => [stock.size.size, stock.stock])
-        );
-
-        console.log('productStock', productStock);
-
-        const availableStock = productStock.get(localItem.size.size);
+        const availableStock = stock.stock
         const totalQuantityInCart = existingItemInCart ? existingItemInCart.quantity : 0;
 
 
@@ -187,7 +175,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
           return {
             ...stockCheckResult,
             size: localItem.size,
-            productTitle: product.title
+            productTitle: localItem.title
           };
         }
 
@@ -196,8 +184,6 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
             await strapi.entityService.update('api::cart-item.cart-item', existingItemInCart.id, {
               data: {
                 quantity: stockCheckResult.added + totalQuantityInCart,
-                size: localItem.size.size,
-                product: localItem.productId,
               }
             });
           }
@@ -205,7 +191,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
           return {
             ...stockCheckResult,
             size: localItem.size,
-            productTitle: product.title
+            productTitle: localItem.title
           };
         }
 
@@ -242,7 +228,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
           const newItem = await strapi.entityService.create('api::cart-item.cart-item', {
             data: {
               quantity: localItem.quantity,
-              size: localItem.size.size,
+              size: localItem.size.id,
               product: localItem.productId,
               localCartItemId: localItem.localCartItemId,
               publishedAt: new Date(),
@@ -274,7 +260,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
 
       // console.log('reducedResults', reducedResults)
       const mergedCart = await strapi.entityService.findOne('api::cart.cart', cartId, {
-        populate: ['items', 'items.product', 'items.product.img'],
+        populate: ['items', 'items.size', 'items.product', 'items.product.img'],
       });
 
 
@@ -284,7 +270,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
       const response = {
         message: 'Cart merged',
         cartId,
-        mergedCart: mergedCart.items.map(item => ({...item})),
+        mergedCart: mergedCart.items,
         failures: failedResults,
         partials: partials,
         reduced: reducedResults,
@@ -304,7 +290,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
 
 
   async addItemToCart(ctx) {
-    const { productId, quantity: requestedQuantity, size, localCartItemId, existingLocalCartItemQty, price, userId } = ctx.request.body;
+    const { productId, quantity: requestedQuantity, size, localCartItemId, existingLocalCartItemQty, price, userId, cartId } = ctx.request.body;
 
     console.log({ requestedQuantity, size });
 
@@ -326,26 +312,22 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
 
       const userIsAuthenticated = userId ? true : false;
 
-      let cart;
-      if (userIsAuthenticated) {
-        cart = await strapi.db.query('api::cart.cart').findOne({
-          where: { user: userId }, // Properly query the relational user field
-          populate: ['items', 'items.product', 'items.product.stocks.size'],
-        });
-      }
+      const cart = userIsAuthenticated && await strapi.entityService.findOne('api::cart.cart', cartId, { // Properly query the relational user field
+        populate: ['items', 'items.size', 'items.product', 'items.product.stocks.size'],
+      });
 
       console.log('cart', cart)
-      const cartId = cart?.id
 
-      const existingStrapiCartItem = cart?.items?.find((item) => item.product.id === productId && item.size === size.size);
+      const existingStrapiCartItem = cart?.items?.find((item) => item.product.id === productId && item.size.size === size.size);
       const itemExistsLocally = existingLocalCartItemQty > 0;
-      console.log('existingLocalCartItemQty', existingLocalCartItemQty)
+
+      console.log('existingStrapiCartItem', existingStrapiCartItem)
       const limitedStock = availableStock < (requestedQuantity + existingLocalCartItemQty);
       console.log('limitedStock', limitedStock)
 
       if (availableStock <= 0) {
         // Send error response with available stock included
-        if (userIsAuthenticated && existingStrapiCartItem) {
+        if (existingStrapiCartItem) {
           const updatedItem = await strapi.db.query('api::cart-item.cart-item').update({
             where: { id: existingStrapiCartItem.id },
             data: { outOfStock: true },
@@ -355,7 +337,6 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
         return ctx.send({
           message: 'Out of stock',
           status: 'out-of-stock',
-
         }, 400);
       }
       else if (availableStock === existingLocalCartItemQty) {
@@ -421,7 +402,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
               if (userIsAuthenticated) {
                 updatedItem = await strapi.db.query('api::cart-item.cart-item').update({
                   where: { id: existingStrapiCartItem?.id },
-                  data: { requestedQuantity: existingLocalCartItemQty + requestedQuantity },
+                  data: { quantity: existingLocalCartItemQty + requestedQuantity },
                 });
               }
 
@@ -438,7 +419,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
             let createdCartItem;
             if (userIsAuthenticated) {
               createdCartItem = await strapi.db.query('api::cart-item.cart-item').create({
-                data: { cart: cartId, product: productId, requestedQuantity: availableStock, size: size.size, localCartItemId, price, publishedAt: new Date(), localCartItemId },
+                data: { cart: cartId, product: productId, quantity: availableStock, size: size.id, localCartItemId, price, publishedAt: new Date(), localCartItemId },
               });
 
               console.log('createdCartItem', createdCartItem)
@@ -457,7 +438,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
             let createdCartItem
             if (userIsAuthenticated) {
               createdCartItem = await strapi.db.query('api::cart-item.cart-item').create({
-                data: { cart: cartId, product: productId, requestedQuantity: requestedQuantity, size: size.size, localCartItemId, price, publishedAt: new Date(), localCartItemId },
+                data: { cart: cartId, product: productId, quantity: requestedQuantity, size: size.id, localCartItemId, price, publishedAt: new Date(), localCartItemId },
               });
 
               console.log('createdCartItem', createdCartItem)
@@ -484,31 +465,44 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
   },
 
   async updateCartItem(ctx) {
-    const { currentQuantity, requestedQuantity, stockId, localCartItemId, userId } = ctx.request.body;
-
-    if (!currentQuantity || !localCartItemId || !stockId) {
+    const { currentQuantity, requestedQuantity, productId, size, localCartItemId, userId } = ctx.request.body;
+    const { strapiCartItemId } = ctx.params;
+    console.log('strapiCartItemId', strapiCartItemId)
+    if (requestedQuantity < 0) {
+      return ctx.badRequest('invalid Input: Requested quantity must be an a positive integer greater that or equal to 0');
+    }
+    if (!localCartItemId || !productId || !size) {
       return ctx.badRequest('Missing required fields');
     }
 
 
-    const existingStrapiCartItem = userId && strapi.db.query("api::cart-item.cart-item").findOne({
-      where: { localCartItemId },
+    const existingStrapiCartItem = strapiCartItemId && await strapi.entityService.findOne("api::cart-item.cart-item", strapiCartItemId)
+
+    const stock = await strapi.db.query("api::stock.stock").findOne({
+      where: { product: productId, size: size },
     })
 
-    const stock = strapi.entityService.find("api:stock.stock", stockId, {
-      populate: ['size']
-    })
-
-    console.log('stock', stock)
 
     const availableStock = stock.stock;
     const userIsAuthenticated = userId ? true : false
+
+    // console.log('existingStrapiCartItem', existingStrapiCartItem)
+    // console.log('currentQuantity', currentQuantity)
+    // console.log('requestedQuantity', requestedQuantity)
+    // console.log('availableStock', availableStock)
+    // console.log('userIsAuthenticated', userIsAuthenticated);
+    const ACTION_TYPES = {
+      INCREASE: 'INCREASE',
+      DECREASE: 'DECREASE',
+    };
+
+    const actionType = currentQuantity < requestedQuantity ? ACTION_TYPES.INCREASE : ACTION_TYPES.DECREASE;
     try {
+
       if (availableStock <= 0) {
         // Send error response with available stock included
         if (userIsAuthenticated) {
-          const updatedItem = await strapi.db.query('api::cart-item.cart-item').update({
-            where: { id: existingStrapiCartItem.id },
+          const updatedItem = await strapi.entityService.update('api::cart-item.cart-item', existingStrapiCartItem.id, {
             data: { outOfStock: true },
           });
         }
@@ -516,89 +510,53 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
         return ctx.send({
           message: 'Out of stock',
           status: 'out-of-stock',
-
         }, 400);
       }
-      else if (availableStock === currentQuantity) {
+
+      if (availableStock === currentQuantity && actionType == ACTION_TYPES.INCREASE) {
         return ctx.send({
           message: 'Available Stock Already In Your Cart',
           status: 'max-stock-already',
           availableStock: availableStock,
-          localCartItemId
         }, 400);
       }
-      else {
-        // Check stock first
-        // Update existing item
-        // Check whether item's current qty is greater than available stock
-        const currentQtyExeedsLimit = currentQuantity > availableStock;
-        let updatedItem;
-
-        switch (true) {
-          // case (limitedStock && !currentQtyExeedsLimit):
-          //   if (userIsAuthenticated) {
-          //     updatedItem = await strapi.db.query('api::cart-item.cart-item').update({
-          //       where: { id: existingStrapiCartItem.id },
-          //       data: { quantity: availableStock },
-          //     });
-          //   }
-          //   const added = availableStock - currentQuantity;
-
-          //   if (added > 0) {
-          //     return ctx.send({
-          //       message: "Limted Stock",
-          //       status: 'partial',
-          //       added,
-          //       newQuantity: availableStock,
-          //     }, 206);
-          //   }
-          //   else {
-          //     return ctx.send({
-          //       message: "Limted Stock",
-          //       status: 'max-stock-already',
-          //       added,
-          //       newQuantity: availableStock,
-          //     }, 400);
-          //   }
-          case (currentQtyExeedsLimit):
-            if (userIsAuthenticated) {
-              updatedItem = await strapi.db.query('api::cart-item.cart-item').update({
-                where: { id: existingStrapiCartItem.id },
-                data: { quantity: availableStock },
-              });
-            }
 
 
-            return ctx.send({
-              message: "Limited Stock",
-              status: 'reduced',
-              reducedBy: currentQuantity - availableStock,
-              newQuantity: availableStock,
-              availableStock,
-            }, 206);
-          default:
-            if (userIsAuthenticated) {
-              updatedItem = await strapi.db.query('api::cart-item.cart-item').update({
-                where: { id: existingStrapiCartItem.id },
-                data: { requestedQuantity: currentQuantity },
-              });
-            }
+      // Check stock first
+      // Update existing item
+      // Check whether item's current qty is greater than available stock
+      const currentQtyExeedsLimit = (currentQuantity > availableStock) && ((currentQuantity - availableStock) > 1);
+      console.log('currentQtyExeedsLimit', currentQtyExeedsLimit)
 
-            return ctx.send({ message: 'Allowed to update', status: 'success' });
+      let updatedItem;
+
+      if (currentQtyExeedsLimit) {
+        if (userIsAuthenticated) {
+          await strapi.entityService.update('api::cart-item.cart-item', existingStrapiCartItem.id, {
+            data: { quantity: availableStock },
+          });
         }
+
+        return ctx.send({
+          message: "Limited Stock",
+          status: 'reduced',
+          reducedBy: currentQuantity - availableStock,
+          newQuantity: availableStock,
+          availableStock,
+        }, 206);
       }
 
-      // // Find the cart
-      // // Check if item already exists in the cart
+      if (userIsAuthenticated) {
+        await strapi.entityService.update('api::cart-item.cart-item', existingStrapiCartItem.id, {
+          data: { quantity: requestedQuantity },
+        });
+      }
 
-      // // Update existing item
-      // const updatedCartItem = await strapi.db.query('api::cart-item.cart-item').update({
-      //   where: { id: cartItemId, localCartItemId },
-      //   data: { quantity: quantity },
-      // });
-
-      // // console.log('updatedCartItem', updatedCartItem);
-      // return ctx.send({ message: 'Item updated successfully', data: updatedCartItem });
+      return ctx.send({
+        message: 'Allowed to update',
+        status: 'success',
+        availableStock
+      });
 
     } catch (error) {
       console.log(error);
@@ -611,10 +569,10 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
       const { cartId, itemId } = ctx.params; // Assuming cartId and itemId are passed in the URL
       // console.log(cartId, itemId)
       // Find the cart
-      const cart = await strapi.db.query('api::cart.cart').findOne({ where: { id: cartId } });
-      if (!cart) {
-        return ctx.badRequest('Cart not found');
-      }
+      // const cart = await strapi.db.query('api::cart.cart').findOne({ where: { id: cartId } });
+      // if (!cart) {
+      //   return ctx.badRequest('Cart not found');
+      // }
 
       // Find the cart item
       const cartItem = await strapi.db.query('api::cart-item.cart-item').findOne({
@@ -629,9 +587,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
       }
 
       // Remove the item
-      await strapi.db.query('api::cart-item.cart-item').delete({
-        where: { id: itemId }
-      });
+      await strapi.entityService.delete('api::cart-item.cart-item', itemId);
 
       // Return a success message
       return ctx.send({ message: 'Item removed successfully' });

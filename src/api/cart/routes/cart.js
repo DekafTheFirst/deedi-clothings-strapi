@@ -37,8 +37,8 @@ module.exports = {
             },
         },
         {
-            method: 'PUT',
-            path: '/carts/updateCartItem:cartItemId',
+            method: 'PATCH',
+            path: '/carts/updateCartItem/:strapiCartItemId',
             handler: 'cart.updateCartItem',
             config: {
                 policies: [],
