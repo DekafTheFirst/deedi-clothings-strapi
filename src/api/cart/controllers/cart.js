@@ -27,7 +27,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
             populate: {
               product: {
                 populate: ['img'],
-                fields: ['title', 'price', 'img']
+                fields: ['title', 'img']
               }
             }
           }
@@ -232,7 +232,6 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
               product: localItem.productId,
               localCartItemId: localItem.localCartItemId,
               publishedAt: new Date(),
-              price: localItem.price,
               cart: cartId
             },
             populate: ['product', 'product.img']
@@ -290,11 +289,11 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
 
 
   async addItemToCart(ctx) {
-    const { productId, quantity: requestedQuantity, size, localCartItemId, existingLocalCartItemQty, price, userId, cartId } = ctx.request.body;
+    const { productId, quantity: requestedQuantity, size, localCartItemId, existingLocalCartItemQty,  userId, cartId } = ctx.request.body;
 
     console.log({ requestedQuantity, size });
 
-    if (!productId || !requestedQuantity || !size || !price || !localCartItemId) {
+    if (!productId || !requestedQuantity || !size  || !localCartItemId) {
       return ctx.badRequest('Missing required fields');
     }
 
@@ -374,7 +373,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
                   newQuantity: availableStock,
                 }, 206);
               }
-              else {
+              else { //On probation
                 return ctx.send({
                   message: "Limted Stock",
                   status: 'max-stock-already',
@@ -419,14 +418,14 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
             let createdCartItem;
             if (userIsAuthenticated) {
               createdCartItem = await strapi.db.query('api::cart-item.cart-item').create({
-                data: { cart: cartId, product: productId, quantity: availableStock, size: size.id, localCartItemId, price, publishedAt: new Date(), localCartItemId },
+                data: { cart: cartId, product: productId, quantity: availableStock, size: size.id, localCartItemId,  publishedAt: new Date(), localCartItemId },
               });
 
               console.log('createdCartItem', createdCartItem)
             }
 
             return ctx.send(
-              {
+              {//On Probation
                 message: 'Limited Stock',
                 data: createdCartItem,
                 availableStock,
@@ -438,7 +437,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
             let createdCartItem
             if (userIsAuthenticated) {
               createdCartItem = await strapi.db.query('api::cart-item.cart-item').create({
-                data: { cart: cartId, product: productId, quantity: requestedQuantity, size: size.id, localCartItemId, price, publishedAt: new Date(), localCartItemId },
+                data: { cart: cartId, product: productId, quantity: requestedQuantity, size: size.id, localCartItemId, publishedAt: new Date(), localCartItemId },
               });
 
               console.log('createdCartItem', createdCartItem)

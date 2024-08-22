@@ -12,7 +12,35 @@ const { createCoreController } = require('@strapi/strapi').factories;
 
 // @ts-ignore
 module.exports = createCoreController("api::order.order", ({ strapi }) => ({
-    // 
+    async initializeCheckout(ctx) {
+        try {
+            // Step 1: Validate Session
+            const user = ctx.state.user; // Strapi auth middleware automatically attaches the user here
+
+            if (!user) {
+                return ctx.unauthorized('Session expired or user not authenticated. Please log in.');
+            }
+
+            // Step 2: Validate and Reserve Stock
+            const cartItems = ctx.request.body.cartItems;
+
+            // Call your stock validation and reservation service
+            // const stockValidationResult = await strapi.services.stock.checkAndReserveStock(cartItems);
+
+            // if (!stockValidationResult.success) {
+            //     return ctx.badRequest(stockValidationResult.message);
+            // }
+
+            // Step 3: Proceed with the rest of checkout initialization
+            return ctx.send({
+                message: 'Checkout initialized successfully',
+                orderDetails: { /* Order details here */ },
+            });
+
+        } catch (error) {
+            return ctx.internalServerError('An error occurred during checkout initialization.');
+        }
+    },
     async create(ctx) {
         const { items, shippingInfo, billingInfo, totalAmount } = ctx.request.body;
         console.log("items", items)
@@ -299,7 +327,7 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
                                     additional_services: { qr_code: 'none' },
                                     buy_label: true,
                                     buy_label_synchronous: true,
-                                    printing_options: {commercial_invoice: 'A4', format: 'url', label: '4x6', packing_slip: '4x6'},
+                                    printing_options: { commercial_invoice: 'A4', format: 'url', label: '4x6', packing_slip: '4x6' },
                                     units: { dimensions: 'in', weight: 'lb' }
                                 },
                                 parcels: [
