@@ -46,6 +46,15 @@ module.exports = {
             },
         },
         {
+            method: 'PATCH',
+            path: '/carts/validate-stock',
+            handler: 'cart.validateStock',
+            config: {
+                policies: [],
+                middlewares: [],
+            },
+        },
+        {
             method: 'POST',
             path: '/carts/addItem',
             handler: 'cart.addItemToCart',

@@ -288,12 +288,13 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
   },
 
 
+
   async addItemToCart(ctx) {
-    const { productId, quantity: requestedQuantity, size, localCartItemId, existingLocalCartItemQty,  userId, cartId } = ctx.request.body;
+    const { productId, quantity: requestedQuantity, size, localCartItemId, existingLocalCartItemQty, userId, cartId } = ctx.request.body;
 
     console.log({ requestedQuantity, size });
 
-    if (!productId || !requestedQuantity || !size  || !localCartItemId) {
+    if (!productId || !requestedQuantity || !size || !localCartItemId) {
       return ctx.badRequest('Missing required fields');
     }
 
@@ -418,7 +419,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
             let createdCartItem;
             if (userIsAuthenticated) {
               createdCartItem = await strapi.db.query('api::cart-item.cart-item').create({
-                data: { cart: cartId, product: productId, quantity: availableStock, size: size.id, localCartItemId,  publishedAt: new Date(), localCartItemId },
+                data: { cart: cartId, product: productId, quantity: availableStock, size: size.id, localCartItemId, publishedAt: new Date(), localCartItemId },
               });
 
               console.log('createdCartItem', createdCartItem)
@@ -547,7 +548,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
 
       if (userIsAuthenticated) {
         await strapi.entityService.update('api::cart-item.cart-item', existingStrapiCartItem.id, {
-          data: { quantity: requestedQuantity },
+          data: { quantity: availableStock },
         });
       }
 
@@ -562,6 +563,166 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
       return ctx.internalServerError('Failed to update item');
     }
   },
+
+
+  async validateStock(ctx) {
+    const { items, cartId } = ctx.request.body;
+    console.log('items', items)
+
+    console.log('items', items.map(item => ({ id: item.productId, size: item.size.size, quantity: item.quantity })))
+
+
+    if (!items) {
+      return ctx.badRequest('List of items is required');
+    }
+
+    try {
+      const userIsAuthenticated = ctx.state.isAuthenticated;
+      console.log('userIsAuthenticated', userIsAuthenticated);
+      const userId = ctx.state.user?.id;
+
+      let existingStrapiCartItems = [];
+
+
+      if (userIsAuthenticated) {
+        const strapiCartItemIds = items.map(item => item.strapiCartItemId).filter(Boolean);
+        console.log('strapiCartItemIds', strapiCartItemIds)
+        existingStrapiCartItems = await strapi.entityService.findMany("api::cart-item.cart-item", {
+          filters: {
+            id: { $in: strapiCartItemIds },
+            cart: cartId,  // Replace with your actual cart ID field name
+            user: userId,
+          },
+          populate: ['product', 'size']
+        });
+      }
+
+      // console.log('existingStrapiCartItem', existingStrapiCartItems)
+
+      console.log('existingStrapiCartItems', existingStrapiCartItems.map(item => ({ id: item.product.id, size: item.size.size, quantity: item.quantity })))
+
+
+      const existingStrapiCartItemsDict = {};
+      existingStrapiCartItems.forEach(item => {
+        existingStrapiCartItemsDict[item.id] = item;
+      });
+
+      // console.log('existingStrapiCartItemsDict', existingStrapiCartItemsDict)
+
+
+
+      const results = await Promise.all(items.map(async (item) => {
+        const { quantity, productId, size, localCartItemId, userId, strapiCartItemId, outOfStock } = item;
+        const stock = await strapi.db.query("api::stock.stock").findOne({
+          where: { product: productId, size: size },
+          populate: ['product']
+        })
+
+
+
+
+        const availableStock = stock.stock;
+        const existingStrapiCartItem = existingStrapiCartItemsDict[strapiCartItemId];
+
+        // console.log('existingStrapiCartItem', existingStrapiCartItem)
+        // console.log('quantity', quantity)
+        console.log('availableStock', availableStock)
+        // console.log('userIsAuthenticated', userIsAuthenticated);
+
+
+        if (!outOfStock) {
+          if (availableStock <= 0) {
+            // Send error response with available stock included
+            if (userIsAuthenticated) {
+              const updatedItem = await strapi.entityService.update('api::cart-item.cart-item', existingStrapiCartItem.id, {
+                data: { outOfStock: true },
+              });
+            }
+
+            return {
+              message: 'Out of stock',
+              status: 'out-of-stock',
+              size: size,
+              localCartItemId,
+              productTitle: stock.product.title
+            };
+          }
+
+          // Check stock first
+          // Update existing item
+          // Check whether item's current qty is greater than available stock
+          const currentQtyExeedsLimit = (quantity > availableStock);
+          console.log('currentQtyExeedsLimit', currentQtyExeedsLimit)
+
+          let updatedItem;
+
+          if (currentQtyExeedsLimit) {
+            if (userIsAuthenticated) {
+              await strapi.entityService.update('api::cart-item.cart-item', existingStrapiCartItem.id, {
+                data: { quantity: availableStock },
+              });
+            }
+
+            return {
+              message: "Limited Stock",
+              productTitle: stock.product.title,
+              size: size,
+              status: 'reduced',
+              localCartItemId,
+              reducedBy: quantity - availableStock,
+              newQuantity: availableStock,
+              availableStock,
+            };
+          }
+
+          return {
+            message: 'Success',
+            status: 'success',
+            availableStock,
+            localCartItemId,
+          };
+        }
+
+        else {
+          return {
+            message: 'Already Out Stock',
+            status: 'already-out-of-stock',
+            availableStock,
+            localCartItemId,
+          };
+        }
+
+
+      }))
+
+      console.log('results', results)
+
+      const successResults = results.filter((result) => result.status === 'success');
+      const reducedResults = results.filter((result) => result.status === 'reduced');
+      const outOfStockResults = results.filter((result) => result.status === 'out-of-stock');
+
+      const response = {
+        message: 'Cart merged',
+        cartId,
+        reduced: reducedResults,
+        outOfStock: outOfStockResults,
+      };
+
+
+      ctx.send({
+        success: successResults,
+        reduced: reducedResults,
+        outOfStock: outOfStockResults,
+      });
+
+    }
+    catch (error) {
+      console.error(error)
+      ctx.throw(500, `Failed to validate stock: ${error.message}`);
+    }
+
+  },
+
 
   async removeItemFromCart(ctx) {
     try {
