@@ -630,70 +630,63 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
         // console.log('userIsAuthenticated', userIsAuthenticated);
 
 
-        if (!outOfStock) {
-          if (availableStock <= 0) {
-            // Send error response with available stock included
-            if (userIsAuthenticated) {
-              const updatedItem = await strapi.entityService.update('api::cart-item.cart-item', existingStrapiCartItem.id, {
-                data: { outOfStock: true },
-              });
-            }
-
-            return {
-              message: 'Out of stock',
-              status: 'out-of-stock',
-              size: size,
-              localCartItemId,
-              productTitle: stock.product.title
-            };
-          }
-
-          // Check stock first
-          // Update existing item
-          // Check whether item's current qty is greater than available stock
-          const currentQtyExeedsLimit = (quantity > availableStock);
-          console.log('currentQtyExeedsLimit', currentQtyExeedsLimit)
-
-          let updatedItem;
-
-          if (currentQtyExeedsLimit) {
-            if (userIsAuthenticated) {
-              await strapi.entityService.update('api::cart-item.cart-item', existingStrapiCartItem.id, {
-                data: { quantity: availableStock },
-              });
-            }
-
-            return {
-              message: "Limited Stock",
-              productTitle: stock.product.title,
-              size: size,
-              status: 'reduced',
-              localCartItemId,
-              reducedBy: quantity - availableStock,
-              newQuantity: availableStock,
-              availableStock,
-            };
+        if (availableStock <= 0) {
+          // Send error response with available stock included
+          if (userIsAuthenticated) {
+            const updatedItem = await strapi.entityService.update('api::cart-item.cart-item', existingStrapiCartItem.id, {
+              data: { outOfStock: true },
+            });
           }
 
           return {
-            message: 'Success',
-            status: 'success',
-            availableStock,
+            message: 'Out of stock',
+            status: 'out-of-stock',
+            size: size,
             localCartItemId,
+            productTitle: stock.product.title
           };
         }
 
-        else {
+        // Check stock first
+        // Update existing item
+        // Check whether item's current qty is greater than available stock
+        const currentQtyExeedsLimit = (quantity > availableStock);
+        console.log('currentQtyExeedsLimit', currentQtyExeedsLimit)
+
+        let updatedItem;
+
+        if (currentQtyExeedsLimit) {
+          if (userIsAuthenticated) {
+            await strapi.entityService.update('api::cart-item.cart-item', existingStrapiCartItem.id, {
+              data: { quantity: availableStock },
+            });
+          }
+
           return {
-            message: 'Already Out Stock',
-            status: 'already-out-of-stock',
-            availableStock,
+            message: "Limited Stock",
+            productTitle: stock.product.title,
+            size: size,
+            status: 'reduced',
             localCartItemId,
+            reducedBy: quantity - availableStock,
+            newQuantity: availableStock,
+            availableStock,
           };
         }
 
+        return {
+          message: 'Success',
+          status: 'success',
+          availableStock,
+          localCartItemId,
+          productTitle: stock.product.title,
+        };
+      }
 
-      }))
+
+
+
+      ))
 
       console.log('results', results)
 
