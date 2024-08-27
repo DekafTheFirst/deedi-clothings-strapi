@@ -727,6 +727,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
   
       let existingStrapiCartItems = [];
       if (userIsAuthenticated) {
+        
         const strapiCartItemIds = items.map(item => item.strapiCartItemId).filter(Boolean);
         existingStrapiCartItems = await strapi.entityService.findMany("api::cart-item.cart-item", {
           filters: {
