@@ -7,7 +7,7 @@
 const { createCoreService } = require('@strapi/strapi').factories;
 
 module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
-    async validateStock({ productId, size, quantity }) {
+    async validateStock({ productId, size, quantity, reserve = false }) {
         try {
             const stock = await strapi.db.query('api::stock.stock').findOne({
                 where: { product: productId, size: size },
