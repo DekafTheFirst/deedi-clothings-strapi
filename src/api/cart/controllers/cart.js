@@ -720,39 +720,40 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
     if (!items) {
       return ctx.badRequest('List of items is required');
     }
-  
+
     try {
       const userIsAuthenticated = ctx.state.isAuthenticated;
       const userId = ctx.state.user?.id;
-  
-      let existingStrapiCartItems = [];
-      if (userIsAuthenticated) {
-        
-        const strapiCartItemIds = items.map(item => item.strapiCartItemId).filter(Boolean);
-        existingStrapiCartItems = await strapi.entityService.findMany("api::cart-item.cart-item", {
-          filters: {
-            id: { $in: strapiCartItemIds },
-            cart: cartId,
-            user: userId,
-          },
-          populate: ['product', 'size'],
-        });
-      }
-  
+
+      // if (userIsAuthenticated) {
+
+      //   const strapiCartItemIds = items.map(item => item.strapiCartItemId).filter(Boolean);
+      //   existingStrapiCartItems = await strapi.entityService.findMany("api::cart-item.cart-item", {
+      //     filters: {
+      //       id: { $in: strapiCartItemIds },
+      //       cart: cartId,
+      //       user: userId,
+      //     },
+      //     populate: ['product', 'size'],
+      //   });
+      // }
+
+
+
       const results = await Promise.all(items.map(async (item) => {
         const { productId, size, quantity, strapiCartItemId, localCartItemId } = item;
-  
+
         const validation = await strapi.service('api::stock.stock').validateStock({
           productId,
           size,
           quantity,
         });
-  
+
         if (validation.status === 'out-of-stock') {
           if (userIsAuthenticated && strapiCartItemId) {
             await strapi.service('api::stock.stock').handleOutOfStock({ cartItemId: strapiCartItemId });
           }
-  
+
           return {
             message: 'Out of stock',
             status: 'out-of-stock',
@@ -761,14 +762,14 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
             productTitle: validation.productTitle,
           };
         }
-  
+
         if (validation.status === 'limited') {
           const updatedItem = userIsAuthenticated && await strapi.service('api::stock.stock').updateCartItem({
             cartItemId: strapiCartItemId,
             newQuantity: validation.availableStock,
             productTitle: validation.productTitle,
           });
-  
+
           return {
             message: "Limited Stock",
             status: 'reduced',
@@ -781,7 +782,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
 
           };
         }
-  
+
         return {
           message: 'Success',
           status: 'success',
@@ -790,7 +791,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
           productTitle: validation.productTitle,
         };
       }));
-  
+
       ctx.send({
         success: results.filter(result => result.status === 'success'),
         reduced: results.filter(result => result.status === 'reduced'),
