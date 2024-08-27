@@ -578,9 +578,9 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
 
     try {
       const userIsAuthenticated = ctx.state.isAuthenticated;
-      console.log('userIsAuthenticated', userIsAuthenticated);
+      console.log('state', ctx.state);
       const userId = ctx.state.user?.id;
-
+      console.log('userId', userId)
       let existingStrapiCartItems = [];
 
 
