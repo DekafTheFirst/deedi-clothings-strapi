@@ -4,7 +4,8 @@
   "info": {
     "singularName": "stock-reservation",
     "pluralName": "stock-reservations",
-    "displayName": "StockReservation"
+    "displayName": "StockReservation",
+    "description": ""
   },
   "options": {
     "draftAndPublish": true
@@ -30,6 +31,10 @@
       "relation": "oneToMany",
       "target": "api::stock-reservation-item.stock-reservation-item",
       "mappedBy": "stock_reservation"
+    },
+    "expiresAt": {
+      "required": true,
+      "type": "datetime"
     }
   }
 }

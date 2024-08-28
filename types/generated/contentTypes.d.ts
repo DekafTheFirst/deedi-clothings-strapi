@@ -1246,6 +1246,7 @@ export interface ApiStockReservationStockReservation
     singularName: 'stock-reservation';
     pluralName: 'stock-reservations';
     displayName: 'StockReservation';
+    description: '';
   };
   options: {
     draftAndPublish: true;
@@ -1262,6 +1263,7 @@ export interface ApiStockReservationStockReservation
       'oneToMany',
       'api::stock-reservation-item.stock-reservation-item'
     >;
+    expiresAt: Attribute.DateTime & Attribute.Required;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;

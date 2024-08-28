@@ -169,7 +169,7 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
 
 
     async reserveStock({ items, validationResults, userId }) {
-        const reservationDuration = 15 * 60 * 1000; // 15 minutes
+        const reservationDuration = 2 * 1000; // 15 minutes
         const reservationExpiresAt = new Date(Date.now() + reservationDuration);
 
         const createdReservation = await strapi.entityService.create('api::stock-reservation.stock-reservation', {
@@ -179,7 +179,7 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
                 status: 'active',
             },
         });
-        console.log('createdReservation', createdReservation)
+        // console.log('createdReservation', createdReservation)
 
 
         const reservationItems = await Promise.all(items.map(async (item) => {
@@ -210,7 +210,7 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
             // };
         }));
 
-        console.log('reservationItems', reservationItems)
+        // console.log('reservationItems', reservationItems)
 
         this.setReservationExpiry(createdReservation.id, reservationDuration);
 
@@ -222,17 +222,21 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
 
     async releaseStock(reservationId) {
         // Logic to release reserved stock
+        // console.log('reservation')
         const reservation = await strapi.entityService.findOne('api::stock-reservation.stock-reservation', reservationId);
-        console.log('reservation')
         if (!reservation) return;
 
+        // This should loop items and update accordingly
         const stock = await strapi.entityService.findOne('api::stock.stock', reservation.stock.id);
-
-        await strapi.entityService.update('api::stock.stock', stock.id, {
+        const availableSock = stock.stock
+        console.log('availableSock', stock.stock)
+        const updated = await strapi.entityService.update('api::stock.stock', stock.id, {
             data: {
                 reserved: stock.reserved - reservation.quantity,
             },
         });
+        console.log('updatedStock', updated.stock)
+
 
         // Optionally, delete the reservation
         await strapi.entityService.delete('api::stock-reservation.stock-reservation', reservationId);
@@ -240,8 +244,8 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
 
     setReservationExpiry(reservationId, reservationDuration) {
         setTimeout(async () => {
-            const reservation = await strapi.entityService.findOne('api::stock-reservation.stock-reservation', reservationId);
-
+            const reservation = await strapi.entityService.findOne('api::stock-reservation.stock-reservation', reservationId, { populate: ['stock'] });
+            console.log('reservation', reservation);
             if (reservation && new Date() > new Date(reservation.expiresAt)) {
                 await this.releaseStock(reservationId);
             }
@@ -253,7 +257,7 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
 
             // Step 1: Validate Stock
             const validationResults = await this.batchValidateStock({ items: items });
-            console.log('validationResults', validationResults)
+            // console.log('validationResults', validationResults)
             // if (validationResults.outOfStock.length > 0) {
             //     return {
             //         success: false,
@@ -264,7 +268,7 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
             // Step 3: Reserve Stock
             let reservation
             if (validationResults.success.length > 0) {
-                reservation = await this.reserveStock({items, validationResults, userId})
+                reservation = await this.reserveStock({ items, validationResults, userId })
             }
 
             // console.log('reservation', reservation);
