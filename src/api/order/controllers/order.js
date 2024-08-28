@@ -114,7 +114,70 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
     },
 
 
-
+    async initializeCheckout(ctx) {
+        const { items, userId, userName, userEmail, cartId } = ctx.request.body;
+    
+        if (!items) {
+          return ctx.badRequest('List of items is required');
+        }
+    
+        try {
+          // Validate and Reserve Stock
+          const results = await Promise.all(items.map(async (item) => {
+            const { productId, size, quantity } = item;
+    
+            // Step 1: Validate Stock using existing method
+            const validation = await strapi.service('api::stock.stock').validateStock({
+              productId,
+              size,
+              quantity,
+            });
+    
+            if (validation.status === 'out-of-stock') {
+              return {
+                message: 'Out of stock',
+                status: 'out-of-stock',
+                productId,
+                size,
+                productTitle: validation.productTitle,
+              };
+            }
+    
+            if (validation.status === 'limited') {
+              return {
+                message: "Limited Stock",
+                status: 'reduced',
+                productId,
+                size,
+                availableStock: validation.availableStock,
+                productTitle: validation.productTitle,
+              };
+            }
+    
+            // Step 2: Reserve Stock
+            const reservation = await strapi.service('api::stock.stock').reserveStock({
+              productId,
+              size,
+              quantity,
+              userId,
+              userName,
+              userEmail,
+              cartId,
+              reservationTime: 15 * 60 * 1000 // 15 minutes reservation time
+            });
+    
+            return reservation;
+          }));
+    
+          ctx.send({
+            success: results.filter(result => result.status === 'reserved'),
+            reduced: results.filter(result => result.status === 'reduced'),
+            outOfStock: results.filter(result => result.status === 'out-of-stock'),
+          });
+        } catch (error) {
+          ctx.throw(500, `Failed to initialize checkout: ${error.message}`);
+        }
+      },
 
 
     async getCouriers(ctx) {

@@ -714,6 +714,45 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
   // },
 
 
+  
+
+
+  async removeItemFromCart(ctx) {
+    try {
+      const { cartId, itemId } = ctx.params; // Assuming cartId and itemId are passed in the URL
+      // console.log(cartId, itemId)
+      // Find the cart
+      // const cart = await strapi.db.query('api::cart.cart').findOne({ where: { id: cartId } });
+      // if (!cart) {
+      //   return ctx.badRequest('Cart not found');
+      // }
+
+      // Find the cart item
+      const cartItem = await strapi.db.query('api::cart-item.cart-item').findOne({
+        where: { id: itemId, cart: cartId }
+      });
+
+      // console.log(cartItem)
+
+
+      if (!cartItem) {
+        return ctx.badRequest('Item not found in cart');
+      }
+
+      // Remove the item
+      await strapi.entityService.delete('api::cart-item.cart-item', itemId);
+
+      // Return a success message
+      return ctx.send({ message: 'Item removed successfully' });
+    } catch (error) {
+      ctx.throw(500, `Failed to remove item from cart: ${error.message}`);
+    }
+
+  },
+
+
+
+
   async validateStock(ctx) {
     const { items, cartId } = ctx.request.body;
     // console.log('reached here')
@@ -724,20 +763,6 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
     try {
       const userIsAuthenticated = ctx.state.isAuthenticated;
       const userId = ctx.state.user?.id;
-
-      // if (userIsAuthenticated) {
-
-      //   const strapiCartItemIds = items.map(item => item.strapiCartItemId).filter(Boolean);
-      //   existingStrapiCartItems = await strapi.entityService.findMany("api::cart-item.cart-item", {
-      //     filters: {
-      //       id: { $in: strapiCartItemIds },
-      //       cart: cartId,
-      //       user: userId,
-      //     },
-      //     populate: ['product', 'size'],
-      //   });
-      // }
-
 
 
       const results = await Promise.all(items.map(async (item) => {
@@ -803,37 +828,5 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
     }
   },
 
-
-  async removeItemFromCart(ctx) {
-    try {
-      const { cartId, itemId } = ctx.params; // Assuming cartId and itemId are passed in the URL
-      // console.log(cartId, itemId)
-      // Find the cart
-      // const cart = await strapi.db.query('api::cart.cart').findOne({ where: { id: cartId } });
-      // if (!cart) {
-      //   return ctx.badRequest('Cart not found');
-      // }
-
-      // Find the cart item
-      const cartItem = await strapi.db.query('api::cart-item.cart-item').findOne({
-        where: { id: itemId, cart: cartId }
-      });
-
-      // console.log(cartItem)
-
-
-      if (!cartItem) {
-        return ctx.badRequest('Item not found in cart');
-      }
-
-      // Remove the item
-      await strapi.entityService.delete('api::cart-item.cart-item', itemId);
-
-      // Return a success message
-      return ctx.send({ message: 'Item removed successfully' });
-    } catch (error) {
-      ctx.throw(500, `Failed to remove item from cart: ${error.message}`);
-    }
-
-  },
+ 
 }));
