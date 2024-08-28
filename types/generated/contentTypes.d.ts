@@ -1216,11 +1216,6 @@ export interface ApiStockStock extends Schema.CollectionType {
       'api::product.product'
     >;
     size: Attribute.Relation<'api::stock.stock', 'manyToOne', 'api::size.size'>;
-    reservation_item: Attribute.Relation<
-      'api::stock.stock',
-      'oneToOne',
-      'api::reservation-item.reservation-item'
-    >;
     stock_reservation_item: Attribute.Relation<
       'api::stock.stock',
       'oneToOne',

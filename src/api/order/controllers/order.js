@@ -27,7 +27,7 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
                 cartId
             })
 
-            console.log('validationResults', validationResults)
+            // console.log('validationResults', validationResults)
 
             
 

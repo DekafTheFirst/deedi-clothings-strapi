@@ -168,77 +168,75 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
 
 
 
-    async reserveStock({ productId, sizeId, quantity, userId, cartId, reservationDuration }) {
+    async reserveStock({ items, validationResults, userId }) {
+        const reservationDuration = 15 * 60 * 1000; // 15 minutes
         const reservationExpiresAt = new Date(Date.now() + reservationDuration);
 
-        const reservation = await strapi.entityService.create('api::stock-reservation.stock-reservation', {
+        const createdReservation = await strapi.entityService.create('api::stock-reservation.stock-reservation', {
             data: {
                 user: userId,
-                cart: cartId,
                 expiresAt: reservationExpiresAt,
                 status: 'active',
             },
         });
+        console.log('createdReservation', createdReservation)
 
-        const reservationItem = await strapi.entityService.create('api::stock-reservation-item.stock-reservation-item', {
+
+        const reservationItems = await Promise.all(items.map(async (item) => {
+            const validation = validationResults.success.find(result => result.localCartItemId === item.localCartItemId);
+            // console.log('validation', validation)
+
+            const quantityToReserve = validation.status === 'reduced' ? validation.newQuantity : item.quantity;
+            // console.log('quantityToReserve', quantityToReserve)
+            // console.log('userId: ', userId)
+            // console.log('cartId: ', cartId)
+
+            // const createdReservation = await this.reserveStock({
+            //     productId: item.productId,
+            //     sizeId: item.size.id,
+            //     quantity: quantityToReserve,
+            //     userId,
+            //     cartId,
+            //     reservationDuration,
+            // });
+
+            // return {
+            //     message: validation.status === 'reduced' ? 'Limited Stock' : 'Stock Reserved',
+            //     status: validation.status,
+            //     localCartItemId: item.localCartItemId,
+            //     newQuantity: quantityToReserve,
+            //     availableStock: validation.availableStock,
+            //     productTitle: validation.productTitle,
+            // };
+        }));
+
+        console.log('reservationItems', reservationItems)
+
+        this.setReservationExpiry(createdReservation.id, reservationDuration);
+
+
+        // Set the dynamic expiration for the entire createdReservation
+
+        return createdReservation;
+    },
+
+    async releaseStock(reservationId) {
+        // Logic to release reserved stock
+        const reservation = await strapi.entityService.findOne('api::stock-reservation.stock-reservation', reservationId);
+        console.log('reservation')
+        if (!reservation) return;
+
+        const stock = await strapi.entityService.findOne('api::stock.stock', reservation.stock.id);
+
+        await strapi.entityService.update('api::stock.stock', stock.id, {
             data: {
-                reservation: reservation.id,
-                product: productId,
-                size: sizeId,
-                quantity,
+                reserved: stock.reserved - reservation.quantity,
             },
         });
 
-        // Set the dynamic expiration for the entire reservation
-        setReservationExpiry(reservation.id, reservationDuration);
-
-        return reservation;
+        // Optionally, delete the reservation
+        await strapi.entityService.delete('api::stock-reservation.stock-reservation', reservationId);
     },
-
-    async validateAndReserveStock({ items, userId, cartId }) {
-        try {
-            const reservationDuration = 15 * 60 * 1000; // 15 minutes
-
-            // Step 1: Validate Stock
-            const validationResults = await this.batchValidateStock({ items: items });
-            console.log('validationResults', validationResults)
-
-            // Step 3: Reserve Stock
-            const reservePromises = cartItems.map(async (item) => {
-                const validation = validationResults.success.find(result => result.localCartItemId === item.localCartItemId);
-
-                const quantityToReserve = validation.status === 'reduced' ? validation.newQuantity : item.quantity;
-
-                const reservation = await strapi.service('api::stock-reservation.stock-reservation').reserveStock({
-                    productId: item.productId,
-                    sizeId: item.size.id,
-                    quantity: quantityToReserve,
-                    userId,
-                    cartId,
-                    reservationDuration,
-                });
-
-                return {
-                    message: validation.status === 'reduced' ? 'Limited Stock' : 'Stock Reserved',
-                    status: validation.status,
-                    localCartItemId: item.localCartItemId,
-                    newQuantity: quantityToReserve,
-                    availableStock: validation.stock,
-                    productTitle: validation.productTitle,
-                };
-            });
-
-            const results = await Promise.all(reservePromises);
-            console.log('results', results);
-
-            return validationResults;
-        }
-        catch (error) {
-            throw error
-        }
-    },
-
-
 
     setReservationExpiry(reservationId, reservationDuration) {
         setTimeout(async () => {
@@ -249,6 +247,38 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
             }
         }, reservationDuration);
     },
+
+    async validateAndReserveStock({ items, userId, cartId }) {
+        try {
+
+            // Step 1: Validate Stock
+            const validationResults = await this.batchValidateStock({ items: items });
+            console.log('validationResults', validationResults)
+            // if (validationResults.outOfStock.length > 0) {
+            //     return {
+            //         success: false,
+            //         errors: validationResults.outOfStock,
+            //     };
+            // }
+
+            // Step 3: Reserve Stock
+            let reservation
+            if (validationResults.success.length > 0) {
+                reservation = await this.reserveStock({items, validationResults, userId})
+            }
+
+            // console.log('reservation', reservation);
+
+            return validationResults;
+        }
+        catch (error) {
+            throw error
+        }
+    },
+
+
+
+
 
     async updateCartItem({ cartItemId, newQuantity }) {
         try {
