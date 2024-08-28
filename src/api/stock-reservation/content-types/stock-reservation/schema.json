@@ -1,0 +1,35 @@
+{
+  "kind": "collectionType",
+  "collectionName": "stock_reservations",
+  "info": {
+    "singularName": "stock-reservation",
+    "pluralName": "stock-reservations",
+    "displayName": "StockReservation"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "users_permissions_user": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "stock_reservation"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "active",
+        "expired",
+        "completed"
+      ]
+    },
+    "stock_reservation_items": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::stock-reservation-item.stock-reservation-item",
+      "mappedBy": "stock_reservation"
+    }
+  }
+}

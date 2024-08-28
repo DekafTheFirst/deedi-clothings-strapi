@@ -19,8 +19,17 @@ module.exports = {
             },
         },
         {
+            method: 'PATCH',
+            path: '/orders/initialize-checkout',
+            handler: 'order.initializeCheckout',
+            config: {
+                policies: [],
+                middlewares: [],
+            },
+        },
+        {
             method: 'POST',
-            path: '/verify-checkout',
+            path: '/orders/verify-checkout',
             handler: 'order.verifyCheckout',
             config: {
                 policies: [],

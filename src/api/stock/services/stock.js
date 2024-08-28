@@ -1,10 +1,15 @@
 'use strict';
 
+
 /**
  * stock service
  */
 
+const { errors } = require('@strapi/utils');
+const { ApplicationError } = errors;
 const { createCoreService } = require('@strapi/strapi').factories;
+
+
 
 module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
     // Assuming this is located in `api/stock/services/stock.js` or similar
@@ -17,7 +22,7 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
             if (!product) {
                 return {
                     message: 'Product not found',
-                    status: 'product-not-found',
+                    status: 'out-of-stock',
                     localCartItemId,
                     productTitle: 'Unknown Product'
                 };
@@ -31,6 +36,14 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
                     }
                 }
             });
+            if (!stock) {
+                return {
+                    message: 'Stock not found',
+                    status: 'out-of-stock',
+                    localCartItemId,
+                    productTitle: 'Unknown Product'
+                };
+            }
             const availableStock = stock.stock;
 
             // Determine if we need to check against user cart items
@@ -96,18 +109,19 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
     },
 
     async batchValidateStock({ items, cartId, userId }) {
-        console.log('userId', userId)
-        console.log('cartId', cartId)
+        // console.log('userId', userId)
+        // console.log('cartId', cartId)
+        // console.log('items', items)
 
         try {
-            const userCartItems = await strapi.db.query('api::cart-item.cart-item').findMany({
+            const userCartItems = cartId && await strapi.db.query('api::cart-item.cart-item').findMany({
                 where: {
                     cart: cartId,
                 }
             });
 
 
-            const userCartItemsMap = userCartItems.reduce((acc, item) => {
+            const userCartItemsMap = userCartItems?.reduce((acc, item) => {
                 acc[item.id] = item;
                 return acc;
             }, {});
@@ -141,102 +155,100 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
                 }
             });
 
-            console.log('resultsArray', resultsArray)
+            // console.log('resultsArray', resultsArray)
             return results;
         }
         catch (error) {
-            console.error('Error in batch stock validation:', error)
+            // console.error('Error in batch stock validation:', error)
+            throw error
         }
     },
 
     // ... other methods
 
-    async validateAndReserveStock(cartItems, userId, cartId) {
-        const reservationDuration = 15 * 60 * 1000; // 15 minutes
 
-        // Step 1: Validate Stock
-        const validationResults = await this.validateStock({ items: cartItems });
 
-        // Step 2: Check for Out-of-Stock Items
-        if (validationResults.outOfStock.length > 0) {
-            return {
-                success: false,
-                errors: validationResults.outOfStock,
-            };
-        }
+    async reserveStock({ productId, sizeId, quantity, userId, cartId, reservationDuration }) {
+        const reservationExpiresAt = new Date(Date.now() + reservationDuration);
 
-        const results = [];
+        const reservation = await strapi.entityService.create('api::stock-reservation.stock-reservation', {
+            data: {
+                user: userId,
+                cart: cartId,
+                expiresAt: reservationExpiresAt,
+                status: 'active',
+            },
+        });
 
-        // Step 3: Reserve Stock
-        for (const item of cartItems) {
-            const validation = validationResults.success.find(result => result.localCartItemId === item.localCartItemId);
+        const reservationItem = await strapi.entityService.create('api::stock-reservation-item.stock-reservation-item', {
+            data: {
+                reservation: reservation.id,
+                product: productId,
+                size: sizeId,
+                quantity,
+            },
+        });
 
-            const quantityToReserve = validation.status === 'reduced' ? validation.newQuantity : item.quantity;
+        // Set the dynamic expiration for the entire reservation
+        setReservationExpiry(reservation.id, reservationDuration);
 
-            await strapi.service('api::availableStock').reserveStock({
-                productId: item.productId,
-                size: item.size,
-                quantity: quantityToReserve,
-                userId,
-                cartId,
-                expiresAt: new Date(Date.now() + reservationDuration),
-            });
-
-            results.push({
-                message: validation.status === 'reduced' ? 'Limited Stock' : 'Stock Reserved',
-                status: validation.status,
-                localCartItemId: item.localCartItemId,
-                newQuantity: quantityToReserve,
-                availableStock: validation.stock,
-                productTitle: validation.productTitle,
-            });
-        }
-
-        return {
-            success: true,
-            reservedItems: results,
-        };
+        return reservation;
     },
 
-    // async reserveStock({ productId, size, quantity, userId, userName, userEmail, cartId, reservationTime }) {
-    //     try {
-    //         const stock = await strapi.db.query('api::stock.stock').findOne({
-    //             where: { product: productId, size: size },
-    //             populate: ['product'],
-    //         });
+    async validateAndReserveStock({ items, userId, cartId }) {
+        try {
+            const reservationDuration = 15 * 60 * 1000; // 15 minutes
 
-    //         if (!stock) {
-    //             throw new Error('Stock not found');
-    //         }
+            // Step 1: Validate Stock
+            const validationResults = await this.batchValidateStock({ items: items });
+            console.log('validationResults', validationResults)
 
-    //         const availableStock = stock.stock;
-    //         const reservedStock = stock.reservedStock || 0;
+            // Step 3: Reserve Stock
+            const reservePromises = cartItems.map(async (item) => {
+                const validation = validationResults.success.find(result => result.localCartItemId === item.localCartItemId);
 
-    //         if (availableStock - reservedStock < quantity) {
-    //             return { status: 'out-of-stock', availableStock, productTitle: stock.product.title };
-    //         }
+                const quantityToReserve = validation.status === 'reduced' ? validation.newQuantity : item.quantity;
 
-    //         // Update stock reservation
-    //         await strapi.db.query('api::stock.stock').update({
-    //             where: { id: stock.id },
-    //             data: {
-    //                 reservedStock: reservedStock + quantity,
-    //                 reservationExpiry: new Date(new Date().getTime() + reservationTime), // Reservation time in milliseconds
-    //                 reservedForUserId: userId,
-    //                 reservedForUserName: userName,
-    //                 reservedForUserEmail: userEmail,
-    //                 cartId: cartId
-    //             },
-    //         });
+                const reservation = await strapi.service('api::stock-reservation.stock-reservation').reserveStock({
+                    productId: item.productId,
+                    sizeId: item.size.id,
+                    quantity: quantityToReserve,
+                    userId,
+                    cartId,
+                    reservationDuration,
+                });
 
-    //         return { status: 'reserved', availableStock: availableStock - quantity, productTitle: stock.product.title };
-    //     } catch (error) {
-    //         throw new Error(`Failed to reserve stock: ${error.message}`);
-    //     }
-    // },
+                return {
+                    message: validation.status === 'reduced' ? 'Limited Stock' : 'Stock Reserved',
+                    status: validation.status,
+                    localCartItemId: item.localCartItemId,
+                    newQuantity: quantityToReserve,
+                    availableStock: validation.stock,
+                    productTitle: validation.productTitle,
+                };
+            });
+
+            const results = await Promise.all(reservePromises);
+            console.log('results', results);
+
+            return validationResults;
+        }
+        catch (error) {
+            throw error
+        }
+    },
 
 
 
+    setReservationExpiry(reservationId, reservationDuration) {
+        setTimeout(async () => {
+            const reservation = await strapi.entityService.findOne('api::stock-reservation.stock-reservation', reservationId);
+
+            if (reservation && new Date() > new Date(reservation.expiresAt)) {
+                await this.releaseStock(reservationId);
+            }
+        }, reservationDuration);
+    },
 
     async updateCartItem({ cartItemId, newQuantity }) {
         try {

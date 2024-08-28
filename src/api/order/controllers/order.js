@@ -13,37 +13,39 @@ const { createCoreController } = require('@strapi/strapi').factories;
 // @ts-ignore
 module.exports = createCoreController("api::order.order", ({ strapi }) => ({
     async initializeCheckout(ctx) {
+
         try {
-            // Step 1: Validate Session
-            const user = ctx.state.user; // Strapi auth middleware automatically attaches the user here
-
-            if (!user) {
-                return ctx.unauthorized('Session expired or user not authenticated. Please log in.');
-            }
-
             // Step 2: Validate and Reserve Stock
-            const cartItems = ctx.request.body.cartItems;
+            const user = ctx.state.user; // Strapi auth middleware automatically attaches the user here
+            const { items, cartId } = ctx.request.body;
+            console.log('items', items)
 
             // Call your stock validation and reservation service
-            // const stockValidationResult = await strapi.services.stock.checkAndReserveStock(cartItems);
+            const validationResults = await strapi.service('api::stock.stock').validateAndReserveStock({
+                items,
+                userId: user.id,
+                cartId
+            })
 
-            // if (!stockValidationResult.success) {
-            //     return ctx.badRequest(stockValidationResult.message);
-            // }
+            console.log('validationResults', validationResults)
+
+            
 
             // Step 3: Proceed with the rest of checkout initialization
-            return ctx.send({
-                message: 'Checkout initialized successfully',
-                orderDetails: { /* Order details here */ },
-            });
+            // return ctx.send({
+            //     message: 'Checkout initialized successfully',
+            //     orderDetails: { /* Order details here */ },
+            // });
+            return ctx.send(validationResults)
 
         } catch (error) {
+            console.error('Checkout initialization controller error:\n', error)
             return ctx.internalServerError('An error occurred during checkout initialization.');
         }
     },
     async create(ctx) {
         const { items, shippingInfo, billingInfo, totalAmount } = ctx.request.body;
-        console.log("items", items)
+        // console.log("items", items)
         // console.log("billingInfo", billingInfo)
 
 
@@ -114,70 +116,7 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
     },
 
 
-    async initializeCheckout(ctx) {
-        const { items, userId, userName, userEmail, cartId } = ctx.request.body;
-    
-        if (!items) {
-          return ctx.badRequest('List of items is required');
-        }
-    
-        try {
-          // Validate and Reserve Stock
-          const results = await Promise.all(items.map(async (item) => {
-            const { productId, size, quantity } = item;
-    
-            // Step 1: Validate Stock using existing method
-            const validation = await strapi.service('api::stock.stock').validateStock({
-              productId,
-              size,
-              quantity,
-            });
-    
-            if (validation.status === 'out-of-stock') {
-              return {
-                message: 'Out of stock',
-                status: 'out-of-stock',
-                productId,
-                size,
-                productTitle: validation.productTitle,
-              };
-            }
-    
-            if (validation.status === 'limited') {
-              return {
-                message: "Limited Stock",
-                status: 'reduced',
-                productId,
-                size,
-                availableStock: validation.availableStock,
-                productTitle: validation.productTitle,
-              };
-            }
-    
-            // Step 2: Reserve Stock
-            const reservation = await strapi.service('api::stock.stock').reserveStock({
-              productId,
-              size,
-              quantity,
-              userId,
-              userName,
-              userEmail,
-              cartId,
-              reservationTime: 15 * 60 * 1000 // 15 minutes reservation time
-            });
-    
-            return reservation;
-          }));
-    
-          ctx.send({
-            success: results.filter(result => result.status === 'reserved'),
-            reduced: results.filter(result => result.status === 'reduced'),
-            outOfStock: results.filter(result => result.status === 'out-of-stock'),
-          });
-        } catch (error) {
-          ctx.throw(500, `Failed to initialize checkout: ${error.message}`);
-        }
-      },
+
 
 
     async getCouriers(ctx) {

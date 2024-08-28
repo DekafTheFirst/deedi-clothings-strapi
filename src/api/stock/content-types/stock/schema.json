@@ -28,6 +28,18 @@
       "relation": "manyToOne",
       "target": "api::size.size",
       "inversedBy": "stocks"
+    },
+    "reservation_item": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::reservation-item.reservation-item",
+      "mappedBy": "stock"
+    },
+    "stock_reservation_item": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::stock-reservation-item.stock-reservation-item",
+      "mappedBy": "stock"
     }
   }
 }

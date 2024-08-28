@@ -770,15 +770,16 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
         userId: user.id,
         cartId
       });
+
+      console.log('validationResults', validationResults)
       
 
       ctx.send(validationResults);
     } catch (error) {
-      console.error('Failed to validate stock:', error)
-      ctx.throw(500, `Failed to validate stock: ${error.message}`);
+      console.error('Failed to validate stock:\n', error)
+      ctx.internalServerError('An error occured during stock validation');
     }
-  }
-  ,
+  },
 
 
 }));
