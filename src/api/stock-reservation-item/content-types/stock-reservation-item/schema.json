@@ -4,13 +4,19 @@
   "info": {
     "singularName": "stock-reservation-item",
     "pluralName": "stock-reservation-items",
-    "displayName": "StockReservationItem"
+    "displayName": "StockReservationItem",
+    "description": ""
   },
   "options": {
     "draftAndPublish": true
   },
   "pluginOptions": {},
   "attributes": {
+    "quantity": {
+      "type": "integer",
+      "unique": false,
+      "required": true
+    },
     "stock_reservation": {
       "type": "relation",
       "relation": "manyToOne",
@@ -19,13 +25,9 @@
     },
     "stock": {
       "type": "relation",
-      "relation": "oneToOne",
+      "relation": "manyToOne",
       "target": "api::stock.stock",
-      "inversedBy": "stock_reservation_item"
-    },
-    "quantity": {
-      "type": "integer",
-      "unique": true
+      "inversedBy": "stock_reservation_items"
     }
   }
 }

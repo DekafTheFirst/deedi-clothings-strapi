@@ -18,12 +18,12 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
             // Step 2: Validate and Reserve Stock
             const user = ctx.state.user; // Strapi auth middleware automatically attaches the user here
             const { items, cartId } = ctx.request.body;
-            console.log('items', items)
+            // console.log('user', user)
 
             // Call your stock validation and reservation service
             const validationResults = await strapi.service('api::stock.stock').validateAndReserveStock({
                 items,
-                userId: user.id,
+                userId: user?.id,
                 cartId
             })
 

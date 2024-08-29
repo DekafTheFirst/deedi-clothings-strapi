@@ -29,10 +29,9 @@
       "target": "api::size.size",
       "inversedBy": "stocks"
     },
-   
-    "stock_reservation_item": {
+    "stock_reservation_items": {
       "type": "relation",
-      "relation": "oneToOne",
+      "relation": "oneToMany",
       "target": "api::stock-reservation-item.stock-reservation-item",
       "mappedBy": "stock"
     }

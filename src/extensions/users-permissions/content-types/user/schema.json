@@ -98,17 +98,12 @@
       "target": "api::wishlist.wishlist",
       "mappedBy": "users_permissions_user"
     },
-    "reservation": {
-      "type": "relation",
-      "relation": "oneToOne",
-      "target": "api::reservation.reservation",
-      "mappedBy": "user"
-    },
-    "stock_reservation": {
+    
+    "stockReservation": {
       "type": "relation",
       "relation": "oneToOne",
       "target": "api::stock-reservation.stock-reservation",
-      "mappedBy": "users_permissions_user"
+      "mappedBy": "user"
     }
   }
 }

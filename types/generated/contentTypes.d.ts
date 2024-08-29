@@ -796,12 +796,7 @@ export interface PluginUsersPermissionsUser extends Schema.CollectionType {
       'oneToOne',
       'api::wishlist.wishlist'
     >;
-    reservation: Attribute.Relation<
-      'plugin::users-permissions.user',
-      'oneToOne',
-      'api::reservation.reservation'
-    >;
-    stock_reservation: Attribute.Relation<
+    stockReservation: Attribute.Relation<
       'plugin::users-permissions.user',
       'oneToOne',
       'api::stock-reservation.stock-reservation'
@@ -1216,9 +1211,9 @@ export interface ApiStockStock extends Schema.CollectionType {
       'api::product.product'
     >;
     size: Attribute.Relation<'api::stock.stock', 'manyToOne', 'api::size.size'>;
-    stock_reservation_item: Attribute.Relation<
+    stock_reservation_items: Attribute.Relation<
       'api::stock.stock',
-      'oneToOne',
+      'oneToMany',
       'api::stock-reservation-item.stock-reservation-item'
     >;
     createdAt: Attribute.DateTime;
@@ -1252,18 +1247,18 @@ export interface ApiStockReservationStockReservation
     draftAndPublish: true;
   };
   attributes: {
-    users_permissions_user: Attribute.Relation<
+    user: Attribute.Relation<
       'api::stock-reservation.stock-reservation',
       'oneToOne',
       'plugin::users-permissions.user'
     >;
     status: Attribute.Enumeration<['active', 'expired', 'completed']>;
+    expiresAt: Attribute.DateTime & Attribute.Required;
     stock_reservation_items: Attribute.Relation<
       'api::stock-reservation.stock-reservation',
       'oneToMany',
       'api::stock-reservation-item.stock-reservation-item'
     >;
-    expiresAt: Attribute.DateTime & Attribute.Required;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;
@@ -1289,11 +1284,13 @@ export interface ApiStockReservationItemStockReservationItem
     singularName: 'stock-reservation-item';
     pluralName: 'stock-reservation-items';
     displayName: 'StockReservationItem';
+    description: '';
   };
   options: {
     draftAndPublish: true;
   };
   attributes: {
+    quantity: Attribute.Integer & Attribute.Required;
     stock_reservation: Attribute.Relation<
       'api::stock-reservation-item.stock-reservation-item',
       'manyToOne',
@@ -1301,10 +1298,9 @@ export interface ApiStockReservationItemStockReservationItem
     >;
     stock: Attribute.Relation<
       'api::stock-reservation-item.stock-reservation-item',
-      'oneToOne',
+      'manyToOne',
       'api::stock.stock'
     >;
-    quantity: Attribute.Integer & Attribute.Unique;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;

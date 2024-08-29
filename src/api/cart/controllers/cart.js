@@ -767,7 +767,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
       // Call the service method to validate stock
       const validationResults = await strapi.service('api::stock.stock').batchValidateStock({
         items,
-        userId: user.id,
+        userId: user?.id,
         cartId
       });
 

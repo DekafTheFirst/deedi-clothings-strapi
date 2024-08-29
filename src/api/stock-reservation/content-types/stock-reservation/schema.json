@@ -12,11 +12,11 @@
   },
   "pluginOptions": {},
   "attributes": {
-    "users_permissions_user": {
+    "user": {
       "type": "relation",
       "relation": "oneToOne",
       "target": "plugin::users-permissions.user",
-      "inversedBy": "stock_reservation"
+      "inversedBy": "stockReservation"
     },
     "status": {
       "type": "enumeration",
@@ -26,15 +26,15 @@
         "completed"
       ]
     },
+    "expiresAt": {
+      "required": true,
+      "type": "datetime"
+    },
     "stock_reservation_items": {
       "type": "relation",
       "relation": "oneToMany",
       "target": "api::stock-reservation-item.stock-reservation-item",
       "mappedBy": "stock_reservation"
-    },
-    "expiresAt": {
-      "required": true,
-      "type": "datetime"
     }
   }
 }
