@@ -10,6 +10,13 @@ const axios = require('axios');
 
 const { createCoreController } = require('@strapi/strapi').factories;
 
+const crypto = require('crypto');
+
+function generateSessionId(orderId) {
+    const timestamp = Date.now();
+    const randomComponent = crypto.randomBytes(16).toString('hex');
+    return `sess_${orderId}_${timestamp}_${randomComponent}`;
+}
 // @ts-ignore
 module.exports = createCoreController("api::order.order", ({ strapi }) => ({
     async initializeCheckout(ctx) {
@@ -17,32 +24,42 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
         try {
             // Step 2: Validate and Reserve Stock
             const user = ctx.state.user; // Strapi auth middleware automatically attaches the user here
-            const { items, cartId } = ctx.request.body;
+            const { items, cartId, customerEmail } = ctx.request.body;
             // console.log('user', user)
 
             // Call your stock validation and reservation service
-            const validationResults = await strapi.service('api::stock.stock').validateAndReserveStock({
+            const { validationResults, reservationId } = await strapi.service('api::stock.stock').validateAndReserveStock({
                 items,
                 userId: user?.id,
                 cartId
             })
 
-            // console.log('validationResults', validationResults)
+            console.log('validationResults', validationResults)
 
+            const validItems = [...validationResults.success, ...validationResults.reduced]
+            console.log('validItems', validItems)
+
+            const sessionId = generateSessionId(reservationId);
+            console.log('sessionId', sessionId)
             
+            ctx.cookies.set('checkout_session_id', sessionId, {
+                httpOnly: true, // Makes the cookie inaccessible to JavaScript
+                secure: process.env.NODE_ENV === 'production', // Ensure the cookie is only sent over HTTPS in production
+                sameSite: 'Strict', // Adjust based on your cross-site needs
+                maxAge: 15 * 60 * 1000 // 15 minutes in milliseconds
+            });
 
-            // Step 3: Proceed with the rest of checkout initialization
-            // return ctx.send({
-            //     message: 'Checkout initialized successfully',
-            //     orderDetails: { /* Order details here */ },
-            // });
-            return ctx.send(validationResults)
+            return ctx.send({
+                validationResults,
+            })
+
 
         } catch (error) {
             console.error('Checkout initialization controller error:\n', error)
             return ctx.internalServerError('An error occurred during checkout initialization.');
         }
     },
+
     async create(ctx) {
         const { items, shippingInfo, billingInfo, totalAmount } = ctx.request.body;
         // console.log("items", items)
@@ -72,12 +89,11 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
                 success_url: `${process.env.CLIENT_URL}/checkout-success?session_id={CHECKOUT_SESSION_ID}`,
                 cancel_url: `${process.env.CLIENT_URL}/checkout`,
                 line_items: lineItems,
-                customer_email: shippingInfo.email,
+                customer_email: billingInfo?.email,
                 payment_method_types: ['card'],
             });
 
-
-            await strapi.service('api::order.order').create({
+            const createdOrder = await strapi.service('api::order.order').create({
                 data: {
                     items,
                     stripeId: session.id,
@@ -88,7 +104,7 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
                 },
             });
 
-            return { stripeSession: session };
+            return createdOrder;
         } catch (err) {
             console.log(err)
             ctx.response.status = 500;

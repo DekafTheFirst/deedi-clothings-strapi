@@ -13,10 +13,10 @@ const { createCoreService } = require('@strapi/strapi').factories;
 
 module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
     // Assuming this is located in `api/stock/services/stock.js` or similar
-    async validateCartItem({ item, userCartItemsMap = null, requestedQuantity }) {
-        const { productId, size, quantity, localCartItemId, strapiCartItemId } = item;
+    async validateCartItem({ item, userCartItemsMap = null, requestedQuantity, cartId }) {
+        const { productId, size, quantity: currentQuantity, localCartItemId, strapiCartItemId } = item;
         // console.log("ProductId: ", productId, ',requested: ', requestedQuantity)
-        // console.log('userCartItemsMap', userCartItemsMap)
+        // console.log('cartId', cartId);
         try {
             // Fetch product and stock details
             const product = await strapi.query('api::product.product').findOne({ where: { id: productId } });
@@ -25,7 +25,8 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
                     message: 'Product not found',
                     status: 'out-of-stock',
                     localCartItemId,
-                    productTitle: 'Unknown Product'
+                    productTitle: 'Unknown Product',
+                    productId
                 };
             }
 
@@ -42,7 +43,8 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
                     message: 'Stock not found',
                     status: 'out-of-stock',
                     localCartItemId,
-                    productTitle: 'Unknown Product'
+                    productTitle: 'Unknown Product',
+                    productId
                 };
             }
             const availableStock = stock.stock;
@@ -52,7 +54,7 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
             if (strapiCartItemId) {
                 cartItem = userCartItemsMap
                     ? userCartItemsMap[strapiCartItemId]
-                    : await strapi.query('api::cart-item.cart-item').findOne({ where: { id: strapiCartItemId } });
+                    : await strapi.query('api::cart-item.cart-item').findOne({ where: { id: strapiCartItemId, cart: cartId } });
             }
 
             if (availableStock <= 0) {
@@ -69,11 +71,12 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
                     size: size,
                     localCartItemId,
                     productTitle: stock.product.title,
+                    productId,
                     stockId: stock.id
                 };
             }
 
-            if (quantity > availableStock) {
+            if (currentQuantity > availableStock) {
                 if (cartItem) {
                     await strapi.entityService.update('api::cart-item.cart-item', strapiCartItemId, {
                         data: { quantity: availableStock },
@@ -85,11 +88,14 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
                     status: 'reduced',
                     size: size,
                     localCartItemId,
-                    reducedBy: quantity - availableStock,
+                    quantity: currentQuantity,
+                    reducedBy: currentQuantity - availableStock,
                     newQuantity: availableStock,
                     stockId: stock.id,
                     availableStock,
                     productTitle: stock.product.title,
+                    productId
+
                 };
             }
 
@@ -99,7 +105,8 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
                 availableStock,
                 localCartItemId,
                 productTitle: stock.product.title,
-                quantity: quantity,
+                productId,
+                quantity: currentQuantity,
                 stockId: stock.id,
 
             };
@@ -109,7 +116,8 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
                 message: `Error validating stock: ${error.message}`,
                 status: 'validation-error',
                 localCartItemId,
-                productTitle: 'Unknown Product'
+                productTitle: 'Unknown Product',
+                productId
             };
         }
     },
@@ -141,6 +149,7 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
             // Map over items and create an array of promises for validation
             const validationPromises = items.map(async (item) => this.validateCartItem({
                 item,
+                cartId,
                 userCartItemsMap
             }));
 
@@ -176,7 +185,7 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
         try {
 
             // Step 1: Validate Stock
-            const validationResults = await this.batchValidateStock({ items: items });
+            const validationResults = await this.batchValidateStock({ items: items, cartId });
             // console.log('validationResults', validationResults)
             // if (validationResults.outOfStock.length > 0) {
             //     return {
@@ -191,9 +200,9 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
             // console.log('reservableItems', reservableItems)
             const reservation = await this.reserveStock({ validatedStockItems: reservableItems, userId })
 
-            // console.log('reservation', reservation);
+            console.log('reservation', reservation);
 
-            return validationResults;
+            return { validationResults: validationResults, reservationId: reservation.id };
         }
         catch (error) {
             throw error
@@ -203,8 +212,8 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
     async reserveStock({ validatedStockItems, userId }) {
         const reservationDuration = 2 * 1000; // 15 minutes
         const reservationExpiresAt = new Date(Date.now() + reservationDuration);
-        console.log('validatedStockItems', validatedStockItems);
-        console.log('userId', userId);
+        // console.log('validatedStockItems', validatedStockItems);
+        // console.log('userId', userId);
 
         const createdReservation = await strapi.entityService.create('api::stock-reservation.stock-reservation', {
             data: {
@@ -215,7 +224,7 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
             },
         });
 
-        console.log('createdReservation', createdReservation)
+        // console.log('createdReservation', createdReservation)
 
         const stockUpdates = validatedStockItems.map(item => ({
             id: item.stockId, // Assuming your stock ID field is 'id'
@@ -224,18 +233,18 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
 
         const reservationItems = await Promise.all(validatedStockItems.map(async (validatedItem) => {
             const { status, stockId, availableStock, quantity, newQuantity, localCartItemId, productTitle } = validatedItem;
-            // console.log('validatedItem', validatedItem)
+            console.log('validatedItem', validatedItem)
             const quantityToReserve = status === 'reduced' ? newQuantity : quantity;
 
             // console.log({ status, quantityToReserve })
 
-            const updatedStock = await strapi.entityService.update("api::stock.stock", stockId, {
-                data: {
-                    stock: availableStock - quantityToReserve
-                }
-            })
+            // const updatedStock = await strapi.entityService.update("api::stock.stock", stockId, {
+            //     data: {
+            //         stock: availableStock - quantityToReserve
+            //     }
+            // })
 
-            console.log('updatedStock', updatedStock.stock)
+            // console.log('updatedStock', updatedStock.stock)
 
             const reservationItem = await strapi.entityService.create("api::stock-reservation-item.stock-reservation-item", {
                 data: {
@@ -246,7 +255,7 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
                 },
             })
 
-            console.log('reservationItem', reservationItem)
+            // console.log('reservationItem', reservationItem)
 
             return {
                 status: status,
@@ -258,9 +267,9 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
             };
         }));
 
-        
+
         // this.setReservationExpiry(createdReservation.id, reservationDuration);
-        
+
         const updatedReservation = await strapi.entityService.findOne("api::stock-reservation.stock-reservation", createdReservation?.id);
         console.log('updatedReservation', updatedReservation)
         // Set the dynamic expiration for the entire createdReservation
