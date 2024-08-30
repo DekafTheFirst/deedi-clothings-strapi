@@ -1259,6 +1259,7 @@ export interface ApiStockReservationStockReservation
       'oneToMany',
       'api::stock-reservation-item.stock-reservation-item'
     >;
+    checkoutSessionId: Attribute.String & Attribute.Required;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;

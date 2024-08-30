@@ -98,7 +98,6 @@
       "target": "api::wishlist.wishlist",
       "mappedBy": "users_permissions_user"
     },
-    
     "stockReservation": {
       "type": "relation",
       "relation": "oneToOne",

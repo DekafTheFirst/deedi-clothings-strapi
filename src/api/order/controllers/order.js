@@ -10,13 +10,8 @@ const axios = require('axios');
 
 const { createCoreController } = require('@strapi/strapi').factories;
 
-const crypto = require('crypto');
 
-function generateSessionId(orderId) {
-    const timestamp = Date.now();
-    const randomComponent = crypto.randomBytes(16).toString('hex');
-    return `sess_${orderId}_${timestamp}_${randomComponent}`;
-}
+
 // @ts-ignore
 module.exports = createCoreController("api::order.order", ({ strapi }) => ({
     async initializeCheckout(ctx) {
@@ -30,28 +25,26 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
             const reservationDuration = 15 * 60 * 1000; // 15 minutes in milliseconds
             const reservationExpiresAt = new Date(Date.now() + reservationDuration);
             // Call your stock validation and reservation service
-            const { validationResults, reservationId } = await strapi.service('api::stock.stock').validateAndReserveStock({
+            const { validationResults, checkoutSessionId } = await strapi.service('api::stock.stock').validateAndReserveStock({
                 items,
                 userId: user?.id,
                 cartId,
                 expiresAt: reservationExpiresAt
             })
 
-            console.log('validationResults', validationResults)
+            // console.log('validationResults', validationResults)
 
             const validItems = [...validationResults.success, ...validationResults.reduced]
-            console.log('validItems', validItems)
+            console.log('validItems', validItems.map((item) => ({ product: item.productTitle, status: item.status })))
 
-            const sessionId = generateSessionId(reservationId);
-            console.log('sessionId', sessionId)
-            console.log('reservationExpiresAt', reservationExpiresAt)
-            
-            ctx.cookies.set('checkout_session_id', sessionId, {
-                httpOnly: false, // Set to false to see it in Application tab
-                secure: false,   // Set to false for local development
-                sameSite: 'lax', // Less restrictive, may help with cross-site issues
+
+            // console.log('reservationExpiresAt', reservationExpiresAt)
+
+            ctx.cookies.set('checkout_session_id', checkoutSessionId, {
+                httpOnly: true, // Set to false to see it in Application tab
+                secure: process.env.NODE_ENV === 'production', // Ensure the cookie is only sent over HTTPS in production
+                sameSite: 'strict', // Less restrictive, may help with cross-site issues
                 expires: reservationExpiresAt,
-                path: '/',
                 // 15 minutes in milliseconds
             });
 

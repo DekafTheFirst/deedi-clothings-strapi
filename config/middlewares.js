@@ -2,7 +2,14 @@ module.exports = [
   'strapi::logger',
   'strapi::errors',
   'strapi::security',
-  
+  // {
+  //   name: 'strapi::cors',
+  //   config: {
+  //     origin: ['http://localhost:5173'], // Allow your frontend URL
+  //     headers: '*',
+  //     credentials: true, // Allow cookies to be sent and received
+  //   },
+  // },
   'strapi::cors',
   'strapi::poweredBy',
   'strapi::query',

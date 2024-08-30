@@ -35,6 +35,10 @@
       "relation": "oneToMany",
       "target": "api::stock-reservation-item.stock-reservation-item",
       "mappedBy": "stock_reservation"
+    },
+    "checkoutSessionId": {
+      "type": "string",
+      "required": true
     }
   }
 }
