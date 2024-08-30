@@ -181,7 +181,7 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
 
     // ... other methods
 
-    async validateAndReserveStock({ items, userId, cartId }) {
+    async validateAndReserveStock({ items, userId, cartId, expiresAt }) {
         try {
 
             // Step 1: Validate Stock
@@ -198,7 +198,7 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
 
             const reservableItems = [...validationResults.success, ...validationResults.reduced]
             // console.log('reservableItems', reservableItems)
-            const reservation = await this.reserveStock({ validatedStockItems: reservableItems, userId })
+            const reservation = await this.reserveStocks({ validatedStockItems: reservableItems, userId, expiresAt })
 
             console.log('reservation', reservation);
 
@@ -209,16 +209,15 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
         }
     },
 
-    async reserveStock({ validatedStockItems, userId }) {
-        const reservationDuration = 2 * 1000; // 15 minutes
-        const reservationExpiresAt = new Date(Date.now() + reservationDuration);
+    async reserveStocks({ validatedStockItems, userId, expiresAt }) {
+ 
         // console.log('validatedStockItems', validatedStockItems);
-        // console.log('userId', userId);
+        console.log('expiresAt', expiresAt);
 
         const createdReservation = await strapi.entityService.create('api::stock-reservation.stock-reservation', {
             data: {
                 user: userId,
-                expiresAt: reservationExpiresAt,
+                expiresAt,
                 status: 'active',
                 publishedAt: new Date()
             },
