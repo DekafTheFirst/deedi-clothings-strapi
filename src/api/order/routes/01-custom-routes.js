@@ -36,6 +36,15 @@ module.exports = {
                 middlewares: [],
             },
         },
+        {
+            method: 'POST',
+            path: '/orders/checkout/end',
+            handler: 'order.endCheckoutSession',
+            config: {
+                policies: [],
+                middlewares: [],
+            },
+        },
 
 
     ],

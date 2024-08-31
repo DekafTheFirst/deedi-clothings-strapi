@@ -10,8 +10,8 @@ module.exports = {
         const { data } = event.params;
         const { product, size } = data;
 
-        console.log('product', product);
-        console.log('size', size);
+        // console.log('product', product);
+        // console.log('size', size);
 
 
         if (product?.connect?.length <= 0) {
@@ -43,8 +43,8 @@ module.exports = {
         const { data } = event.params;
         const { product, size } = data
 
-        console.log('product', product);
-        console.log('size', size);
+        // console.log('product', product);
+        // console.log('size', size);
         // const query = {};
         // if () {
         //     query['product'] = product?.connect?.[0]?.id || product?.id;

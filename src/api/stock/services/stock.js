@@ -268,27 +268,73 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
 
 
 
-    async releaseStock(reservationId) {
-        // Logic to release reserved stock
-        // console.log('reservation')
-        const reservation = await strapi.entityService.findOne('api::stock-reservation.stock-reservation', reservationId, { populate: ['stock'] });
-        if (!reservation) return;
-        console.log('reservation', reservation)
-        // This should loop items and update accordingly
-        const stock = await strapi.entityService.findOne('api::stock.stock', reservation.stock.id);
-        const availableSock = stock.stock;
-        console.log('availableSock', stock.stock);
-
-        const updated = await strapi.entityService.update('api::stock.stock', stock.id, {
-            data: {
-                reserved: stock.reserved - reservation.quantity,
-            },
-        });
-        console.log('updatedStock', updated.stock)
-
-
-        // Optionally, delete the reservation
-        await strapi.entityService.delete('api::stock-reservation.stock-reservation', reservationId);
+    async deleteReservation(reservationId) {
+        if (!reservationId) {
+            throw new Error('Reservation ID is required.');
+        }
+    
+        try {
+            console.log('reservationId', reservationId);
+    
+            // Fetch the reservation and related stock items
+            const reservation = await strapi.entityService.findOne('api::stock-reservation.stock-reservation', reservationId, {
+                populate: {
+                    stock_reservation_items: {
+                        populate: ['stock']
+                    }
+                }
+            });
+    
+            if (!reservation) {
+                throw new Error(`Reservation with ID ${reservationId} not found.`);
+            }
+    
+            const reservedItems = reservation.stock_reservation_items;
+            const reservedItemIds = reservedItems.map(item => item.id);
+            console.log('reservedItemIds', reservedItemIds);
+    
+            // Prepare stock updates
+            const stockUpdates = reservedItems.map(reservedItem => ({
+                id: reservedItem.stock.id,
+                reserved: reservedItem.quantity,
+                availableStock: reservedItem.stock.stock
+            }));
+    
+            console.log('stockUpdates', stockUpdates);
+    
+            // Update stocks
+            const updatedStocks = await Promise.all(
+                stockUpdates.map(stock =>
+                    strapi.entityService.update('api::stock.stock', stock.id, {
+                        data: {
+                            stock: stock.availableStock + stock.reserved,
+                        }
+                    })
+                )
+            );
+    
+            console.log('updatedStocks', updatedStocks);
+    
+            // Delete reservation items
+            const { count: noOfReservationItemsDeleted } = await strapi.db.query('api::stock-reservation-item.stock-reservation-item').deleteMany({
+                where: {
+                    id: {
+                        $in: reservedItemIds,
+                    },
+                },
+            });
+    
+            console.log('noOfReservationItemsDeleted', noOfReservationItemsDeleted);
+    
+            // Delete reservation
+            const deletedReservation = await strapi.entityService.delete('api::stock-reservation.stock-reservation', reservationId);
+            console.log('deletedReservation', deletedReservation);
+    
+        } catch (error) {
+            // Log the error and rethrow to be handled by the caller
+            console.error('Error deleting reservation:', error.message);
+            throw new Error(`Failed to delete reservation: ${error.message}`);
+        }
     },
 
 
