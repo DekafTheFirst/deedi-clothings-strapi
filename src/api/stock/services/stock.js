@@ -32,17 +32,27 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
         // console.log("ProductId: ", productId, ',requested: ', requestedQuantity)
         // console.log('cartId', cartId);
         try {
+
             // Fetch product and stock details
-            const product = await strapi.query('api::product.product').findOne({ where: { id: productId } });
+            let result
+
+            const product = await strapi.query('api::product.product').findOne({
+                where: { id: productId },
+                populate: { images: true }
+            });
+
+            console.log('product', product.images)
             if (!product) {
-                return {
+                result = {
                     message: 'Product not found',
                     status: 'out-of-stock',
                     localCartItemId,
                     productTitle: 'Unknown Product',
-                    productId
                 };
             }
+            const { price, discountedPrice } = product
+            const img = product?.images?.[0]?.formats?.thumbnail?.url || product?.images?.[0]?.url
+            console.log('img', img)
 
             const stock = await strapi.query('api::stock.stock').findOne({
                 where: { product: productId, size: size.id },
@@ -52,13 +62,12 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
                     }
                 }
             });
+
+
             if (!stock) {
-                return {
+                result = {
                     message: 'Stock not found',
                     status: 'out-of-stock',
-                    localCartItemId,
-                    productTitle: 'Unknown Product',
-                    productId
                 };
             }
             const availableStock = stock.stock;
@@ -79,14 +88,10 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
                     });
                 }
 
-                return {
+                result = {
                     message: 'Out of stock',
                     status: 'out-of-stock',
                     size: size,
-                    localCartItemId,
-                    productTitle: stock.product.title,
-                    productId,
-                    stockId: stock.id
                 };
             }
 
@@ -97,32 +102,32 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
                     });
                 }
 
-                return {
+                result = {
                     message: "Limited Stock",
                     status: 'reduced',
-                    size: size,
-                    localCartItemId,
                     quantity: currentQuantity,
                     reducedBy: currentQuantity - availableStock,
                     newQuantity: availableStock,
-                    stockId: stock.id,
                     availableStock,
-                    productTitle: stock.product.title,
-                    productId
-
                 };
             }
 
-            return {
+            result = {
                 message: 'Success',
                 status: 'success',
+                quantity: currentQuantity,
                 availableStock,
+            }
+            return {
                 localCartItemId,
                 productTitle: stock.product.title,
                 productId,
-                quantity: currentQuantity,
                 stockId: stock.id,
-
+                size,
+                img,
+                price: price,
+                discountedPrice: discountedPrice,
+                ...result,
             };
 
         } catch (error) {
@@ -131,7 +136,8 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
                 status: 'validation-error',
                 localCartItemId,
                 productTitle: 'Unknown Product',
-                productId
+                productId,
+                price: product.price,
             };
         }
     },
@@ -220,41 +226,41 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
             quantity: item.quantity
         }));
 
-        const reservationItemPromises = await Promise.all(reservationItems.map(async (validatedItem) => {
-            const { status, stockId, availableStock, quantity, newQuantity, localCartItemId, productTitle } = validatedItem;
-            // console.log('validatedItem', validatedItem)
-            const quantityToReserve = status === 'reduced' ? newQuantity : quantity;
+        // const reservationItemPromises = await Promise.all(reservationItems.map(async (validatedItem) => {
+        //     const { status, stockId, availableStock, quantity, newQuantity, localCartItemId, productTitle } = validatedItem;
+        //     // console.log('validatedItem', validatedItem)
+        //     const quantityToReserve = status === 'reduced' ? newQuantity : quantity;
 
-            // console.log({ status, quantityToReserve })
+        //     // console.log({ status, quantityToReserve })
 
-            // const updatedStock = await strapi.entityService.update("api::stock.stock", stockId, {
-            //     data: {
-            //         stock: availableStock - quantityToReserve
-            //     }
-            // })
+        //     const updatedStock = await strapi.entityService.update("api::stock.stock", stockId, {
+        //         data: {
+        //             stock: availableStock - quantityToReserve
+        //         }
+        //     })
 
-            // console.log('updatedStock', updatedStock.stock)
+        //     // console.log('updatedStock', updatedStock.stock)
 
-            const reservationItem = await strapi.entityService.create("api::stock-reservation-item.stock-reservation-item", {
-                data: {
-                    stock: stockId,
-                    quantity,
-                    stock_reservation: reservation.id,
-                    publishedAt: new Date()
-                },
-            })
+        //     const reservationItem = await strapi.entityService.create("api::stock-reservation-item.stock-reservation-item", {
+        //         data: {
+        //             stock: stockId,
+        //             quantity,
+        //             stock_reservation: reservation.id,
+        //             publishedAt: new Date()
+        //         },
+        //     })
 
-            // console.log('reservationItem', reservationItem)
+        //     // console.log('reservationItem', reservationItem)
 
-            return {
-                status: status,
-                message: status === 'reduced' ? 'Limited Stock' : 'Stock Reserved',
-                localCartItemId: localCartItemId,
-                newQuantity: quantityToReserve,
-                availableStock: availableStock,
-                productTitle: productTitle,
-            };
-        }));
+        //     return {
+        //         status: status,
+        //         message: status === 'reduced' ? 'Limited Stock' : 'Stock Reserved',
+        //         localCartItemId: localCartItemId,
+        //         newQuantity: quantityToReserve,
+        //         availableStock: availableStock,
+        //         productTitle: productTitle,
+        //     };
+        // }));
 
 
         // this.setReservationExpiry(reservation.id, reservationDuration);
@@ -268,40 +274,44 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
 
 
 
-    async deleteReservation(reservationId) {
+    async deleteReservation({ reservationId, checkoutSessionId, userId }) {
         if (!reservationId) {
             throw new Error('Reservation ID is required.');
         }
-    
+
         try {
             console.log('reservationId', reservationId);
-    
+
             // Fetch the reservation and related stock items
-            const reservation = await strapi.entityService.findOne('api::stock-reservation.stock-reservation', reservationId, {
+            const reservation = await strapi.db.query('api::stock-reservation.stock-reservation').findOne({
+                where: {
+                    id: reservationId,
+                    checkoutSessionId
+                },
                 populate: {
                     stock_reservation_items: {
                         populate: ['stock']
                     }
                 }
             });
-    
+
             if (!reservation) {
                 throw new Error(`Reservation with ID ${reservationId} not found.`);
             }
-    
+
             const reservedItems = reservation.stock_reservation_items;
             const reservedItemIds = reservedItems.map(item => item.id);
             console.log('reservedItemIds', reservedItemIds);
-    
+
             // Prepare stock updates
             const stockUpdates = reservedItems.map(reservedItem => ({
                 id: reservedItem.stock.id,
                 reserved: reservedItem.quantity,
                 availableStock: reservedItem.stock.stock
             }));
-    
+
             console.log('stockUpdates', stockUpdates);
-    
+
             // Update stocks
             const updatedStocks = await Promise.all(
                 stockUpdates.map(stock =>
@@ -312,9 +322,9 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
                     })
                 )
             );
-    
+
             console.log('updatedStocks', updatedStocks);
-    
+
             // Delete reservation items
             const { count: noOfReservationItemsDeleted } = await strapi.db.query('api::stock-reservation-item.stock-reservation-item').deleteMany({
                 where: {
@@ -323,13 +333,13 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
                     },
                 },
             });
-    
+
             console.log('noOfReservationItemsDeleted', noOfReservationItemsDeleted);
-    
+
             // Delete reservation
             const deletedReservation = await strapi.entityService.delete('api::stock-reservation.stock-reservation', reservationId);
             console.log('deletedReservation', deletedReservation);
-    
+
         } catch (error) {
             // Log the error and rethrow to be handled by the caller
             console.error('Error deleting reservation:', error.message);

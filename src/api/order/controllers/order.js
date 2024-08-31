@@ -32,7 +32,7 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
 
             const reservableItems = [...validationResults.success, ...validationResults.reduced]
             const reservation = await strapi.service('api::stock.stock').reserveStocks({ reservationItems: reservableItems, userId, expiresAt: reservationExpiresAt })
-            // console.log('reservation', reservation)
+            console.log('reservation', reservation)
 
 
 
@@ -51,15 +51,23 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
                 // 15 minutes in milliseconds
             });
 
-            ctx.body = { validationResults };
+            ctx.cookies.set('reservation_id', reservation.id, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict', // Less restrictive, may help with cross-site issues
+                expires: reservationExpiresAt,
+            });
 
 
-            setTimeout(async () => {
-                // console.log('reservation', reservation);
-                if (reservation && new Date() > new Date(reservation.expiresAt)) {
-                    await strapi.service('api::stock.stock').deleteReservation(reservation.id);
-                }
-            }, reservationDuration);
+            ctx.send({ validationResults });
+
+
+            // setTimeout(async () => {
+            //     // console.log('reservation', reservation);
+            //     if (reservation && new Date() > new Date(reservation.expiresAt)) {
+            //         await strapi.service('api::stock.stock').deleteReservation({ reservationId: reservation?.id, checkoutSessionId: reservation?.checkoutSessionId, userId });
+            //     }
+            // }, reservationDuration);
 
         } catch (error) {
             console.error('Checkout initialization controller error:\n', error)
@@ -70,7 +78,23 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
     async endCheckoutSession(ctx) {
         // Logic to release reserved stock
         try {
-            await strapi.service('api::stock.stock').deleteReservation(reservation.id);
+            const user = ctx.state.user;
+            const userId = user?.id;
+
+            const reservationId = ctx.cookies.get('reservation_id');
+            const checkoutSessionId = ctx.cookies.get('checkout_session_id');
+
+            if (!reservationId) {
+                return ctx.badRequest('Missing reservation ID.');
+            }
+
+            if (!checkoutSessionId) {
+                return ctx.badRequest('Missing checkout session ID.');
+            }
+            
+            console.log('reservationId', reservationId);
+            console.log('checkoutSessionId', checkoutSessionId);
+            await strapi.service('api::stock.stock').deleteReservation({ reservationId, checkoutSessionId, userId });
 
             ctx.cookies.set('checkout_session_id', '', {
                 expires: new Date(0)
@@ -88,7 +112,7 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
     async create(ctx) {
         const { items, shippingInfo, billingInfo, totalAmount } = ctx.request.body;
         // console.log("items", items)
-        // console.log("billingInfo", billingInfo)
+        console.log("billingInfo", billingInfo)
 
 
         try {

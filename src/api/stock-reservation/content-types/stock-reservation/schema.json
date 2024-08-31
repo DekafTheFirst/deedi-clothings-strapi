@@ -37,8 +37,7 @@
       "mappedBy": "stock_reservation"
     },
     "checkoutSessionId": {
-      "type": "string",
-      "required": true
+      "type": "uid"
     }
   }
 }

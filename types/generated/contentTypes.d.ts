@@ -1071,7 +1071,7 @@ export interface ApiProductProduct extends Schema.CollectionType {
   };
   attributes: {
     title: Attribute.String & Attribute.Required;
-    img: Attribute.Media<'images' | 'files' | 'videos' | 'audios', true>;
+    images: Attribute.Media<'images' | 'files' | 'videos' | 'audios', true>;
     price: Attribute.Decimal;
     isNew: Attribute.Boolean & Attribute.DefaultTo<false>;
     categories: Attribute.Relation<
@@ -1259,7 +1259,7 @@ export interface ApiStockReservationStockReservation
       'oneToMany',
       'api::stock-reservation-item.stock-reservation-item'
     >;
-    checkoutSessionId: Attribute.String & Attribute.Required;
+    checkoutSessionId: Attribute.UID;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;

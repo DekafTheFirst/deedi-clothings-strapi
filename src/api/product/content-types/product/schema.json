@@ -16,7 +16,7 @@
       "type": "string",
       "required": true
     },
-    "img": {
+    "images": {
       "type": "media",
       "multiple": true,
       "required": false,

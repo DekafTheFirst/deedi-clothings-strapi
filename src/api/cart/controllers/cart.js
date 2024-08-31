@@ -26,7 +26,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
           items: {
             populate: {
               product: {
-                populate: ['img'],
+                populate: ['images'],
                 fields: ['title', 'img']
               }
             }
@@ -234,7 +234,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
               publishedAt: new Date(),
               cart: cartId
             },
-            populate: ['product', 'product.img']
+            populate: ['product', 'product.images']
           });
 
           console.log('createdItem', newItem);
@@ -259,7 +259,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
 
       // console.log('reducedResults', reducedResults)
       const mergedCart = await strapi.entityService.findOne('api::cart.cart', cartId, {
-        populate: ['items', 'items.size', 'items.product', 'items.product.img'],
+        populate: ['items', 'items.size', 'items.product', 'items.product.images'],
       });
 
 
