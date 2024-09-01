@@ -4,18 +4,39 @@
   "info": {
     "singularName": "checkout",
     "pluralName": "checkouts",
-    "displayName": "Checkout"
+    "displayName": "Checkout",
+    "description": ""
   },
   "options": {
     "draftAndPublish": true
   },
   "pluginOptions": {},
   "attributes": {
-    "billing_address": {
+    "user": {
       "type": "relation",
       "relation": "oneToOne",
-      "target": "api::billing-address.billing-address",
-      "inversedBy": "checkout"
+      "target": "plugin::users-permissions.user"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "active",
+        "expired",
+        "completed"
+      ]
+    },
+    "expiresAt": {
+      "required": true,
+      "type": "datetime"
+    },
+    "stock_reservation_items": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::stock-reservation-item.stock-reservation-item",
+      "mappedBy": "checkout"
+    },
+    "checkoutSessionId": {
+      "type": "uid"
     }
   }
 }

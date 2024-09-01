@@ -796,11 +796,6 @@ export interface PluginUsersPermissionsUser extends Schema.CollectionType {
       'oneToOne',
       'api::wishlist.wishlist'
     >;
-    stockReservation: Attribute.Relation<
-      'plugin::users-permissions.user',
-      'oneToOne',
-      'api::stock-reservation.stock-reservation'
-    >;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<
@@ -848,11 +843,6 @@ export interface ApiBillingAddressBillingAddress extends Schema.CollectionType {
       'api::billing-address.billing-address',
       'manyToOne',
       'plugin::users-permissions.user'
-    >;
-    checkout: Attribute.Relation<
-      'api::billing-address.billing-address',
-      'oneToOne',
-      'api::checkout.checkout'
     >;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
@@ -1003,16 +993,25 @@ export interface ApiCheckoutCheckout extends Schema.CollectionType {
     singularName: 'checkout';
     pluralName: 'checkouts';
     displayName: 'Checkout';
+    description: '';
   };
   options: {
     draftAndPublish: true;
   };
   attributes: {
-    billing_address: Attribute.Relation<
+    user: Attribute.Relation<
       'api::checkout.checkout',
       'oneToOne',
-      'api::billing-address.billing-address'
+      'plugin::users-permissions.user'
     >;
+    status: Attribute.Enumeration<['active', 'expired', 'completed']>;
+    expiresAt: Attribute.DateTime & Attribute.Required;
+    stock_reservation_items: Attribute.Relation<
+      'api::checkout.checkout',
+      'oneToMany',
+      'api::stock-reservation-item.stock-reservation-item'
+    >;
+    checkoutSessionId: Attribute.UID;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;
@@ -1273,50 +1272,6 @@ export interface ApiStockStock extends Schema.CollectionType {
   };
 }
 
-export interface ApiStockReservationStockReservation
-  extends Schema.CollectionType {
-  collectionName: 'stock_reservations';
-  info: {
-    singularName: 'stock-reservation';
-    pluralName: 'stock-reservations';
-    displayName: 'StockReservation';
-    description: '';
-  };
-  options: {
-    draftAndPublish: true;
-  };
-  attributes: {
-    user: Attribute.Relation<
-      'api::stock-reservation.stock-reservation',
-      'oneToOne',
-      'plugin::users-permissions.user'
-    >;
-    status: Attribute.Enumeration<['active', 'expired', 'completed']>;
-    expiresAt: Attribute.DateTime & Attribute.Required;
-    stock_reservation_items: Attribute.Relation<
-      'api::stock-reservation.stock-reservation',
-      'oneToMany',
-      'api::stock-reservation-item.stock-reservation-item'
-    >;
-    checkoutSessionId: Attribute.UID;
-    createdAt: Attribute.DateTime;
-    updatedAt: Attribute.DateTime;
-    publishedAt: Attribute.DateTime;
-    createdBy: Attribute.Relation<
-      'api::stock-reservation.stock-reservation',
-      'oneToOne',
-      'admin::user'
-    > &
-      Attribute.Private;
-    updatedBy: Attribute.Relation<
-      'api::stock-reservation.stock-reservation',
-      'oneToOne',
-      'admin::user'
-    > &
-      Attribute.Private;
-  };
-}
-
 export interface ApiStockReservationItemStockReservationItem
   extends Schema.CollectionType {
   collectionName: 'stock_reservation_items';
@@ -1331,15 +1286,15 @@ export interface ApiStockReservationItemStockReservationItem
   };
   attributes: {
     quantity: Attribute.Integer & Attribute.Required;
-    stock_reservation: Attribute.Relation<
-      'api::stock-reservation-item.stock-reservation-item',
-      'manyToOne',
-      'api::stock-reservation.stock-reservation'
-    >;
     stock: Attribute.Relation<
       'api::stock-reservation-item.stock-reservation-item',
       'manyToOne',
       'api::stock.stock'
+    >;
+    checkout: Attribute.Relation<
+      'api::stock-reservation-item.stock-reservation-item',
+      'manyToOne',
+      'api::checkout.checkout'
     >;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
@@ -1468,7 +1423,6 @@ declare module '@strapi/types' {
       'api::shipping-address.shipping-address': ApiShippingAddressShippingAddress;
       'api::size.size': ApiSizeSize;
       'api::stock.stock': ApiStockStock;
-      'api::stock-reservation.stock-reservation': ApiStockReservationStockReservation;
       'api::stock-reservation-item.stock-reservation-item': ApiStockReservationItemStockReservationItem;
       'api::sub-category.sub-category': ApiSubCategorySubCategory;
       'api::wishlist.wishlist': ApiWishlistWishlist;
