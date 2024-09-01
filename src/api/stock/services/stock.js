@@ -43,7 +43,7 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
 
             
 
-            console.log('product', product.images)
+            // console.log('product', product.images)
             if (!product) {
                 return {
                     message: 'Product not found',
@@ -55,7 +55,7 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
 
             const { price, discountedPrice } = product
             const img = product?.images?.[0]?.formats?.thumbnail?.url || product?.images?.[0]?.url
-            console.log('img', img)
+            // console.log('img', img)
 
             const stock = await strapi.query('api::stock.stock').findOne({
                 where: { product: productId, size: size.id },
@@ -96,7 +96,7 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
                     : await strapi.query('api::cart-item.cart-item').findOne({ where: { id: strapiCartItemId, cart: cartId } });
             }
 
-            console.log('availableStock', availableStock)
+            // console.log('availableStock', availableStock)
             if (availableStock <= 0) {
                 // Mark as out of stock in the cart
                 if (cartItem) {
@@ -154,7 +154,7 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
     async batchValidateStock({ items, cartId, userId }) {
         // console.log('userId', userId)
         // console.log('cartId', cartId)
-        console.log('items', items)
+        // console.log('items', items)
 
         try {
             const userCartItems = cartId && await strapi.db.query('api::cart-item.cart-item').findMany({
@@ -186,7 +186,7 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
             
             // Wait for all validation promises to complete
             const resultsArray = await Promise.all(validationPromises);
-            console.log('resultsArray', resultsArray)
+            // console.log('resultsArray', resultsArray)
 
             // Categorize results
             resultsArray.forEach(result => {

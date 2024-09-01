@@ -16,58 +16,69 @@ const { createCoreController } = require('@strapi/strapi').factories;
 module.exports = createCoreController("api::order.order", ({ strapi }) => ({
     async initializeCheckout(ctx) {
         try {
+            const reservationId = ctx.cookies.get('reservation_id');
+            const checkoutSessionId = ctx.cookies.get('checkout_session_id');
+            console.log('checkoutSessionId', checkoutSessionId)
+            console.log('reservationId', reservationId)
             // Step 2: Validate and Reserve Stock
-            const user = ctx.state.user;
-            const userId = user?.id; // Strapi auth middleware automatically attaches the user here
-            const { items, cartId, customerEmail } = ctx.request.body;
-            // console.log('user', user)
+            if (!reservationId && !checkoutSessionId) {
+                const user = ctx.state.user;
+                const userId = user?.id; // Strapi auth middleware automatically attaches the user here
+                const { items, cartId, customerEmail } = ctx.request.body;
+                // console.log('user', user)
 
-            const reservationDuration = 2 * 1000; // 15 minutes in milliseconds
-            const reservationExpiresAt = new Date(Date.now() + reservationDuration);
-            // Call your stock validation and reservation service
-
-
-            const validationResults = await strapi.service('api::stock.stock').batchValidateStock({ items: items, cartId });
-            // console.log('validationResults', validationResults)
-
-            const reservableItems = [...validationResults.success, ...validationResults.reduced]
-            const reservation = await strapi.service('api::stock.stock').reserveStocks({ reservationItems: reservableItems, userId, expiresAt: reservationExpiresAt })
-            console.log('reservation', reservation)
+                const reservationDuration = 10 * 1000; 
+                const reservationExpiresAt = new Date(Date.now() + reservationDuration);
+                // Call your stock validation and reservation service
 
 
+                const validationResults = await strapi.service('api::stock.stock').batchValidateStock({ items: items, cartId });
+                // console.log('validationResults', validationResults)
+
+                const reservableItems = [...validationResults.success, ...validationResults.reduced]
+                const reservation = await strapi.service('api::stock.stock').reserveStocks({ reservationItems: reservableItems, userId, expiresAt: reservationExpiresAt })
+                console.log('reservation', reservation)
 
 
 
-            const validItems = [...validationResults.success, ...validationResults.reduced]
-            console.log('validItems', validItems.map((item) => ({ title: item.productTitle, size: item.size, status: item.status })))
-
-            // console.log('reservationExpiresAt', reservationExpiresAt)
-
-            ctx.cookies.set('checkout_session_id', reservation.checkoutSessionId, {
-                httpOnly: true, // Set to false to see it in Application tab
-                secure: process.env.NODE_ENV === 'production', // Ensure the cookie is only sent over HTTPS in production
-                sameSite: 'strict', // Less restrictive, may help with cross-site issues
-                expires: reservationExpiresAt,
-                // 15 minutes in milliseconds
-            });
-
-            ctx.cookies.set('reservation_id', reservation.id, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict', // Less restrictive, may help with cross-site issues
-                expires: reservationExpiresAt,
-            });
 
 
-            ctx.send({ validationResults });
+                const validItems = [...validationResults.success, ...validationResults.reduced]
+                console.log('validItems', validItems.map((item) => ({ title: item.productTitle, size: item.size, status: item.status })))
+
+                // console.log('reservationExpiresAt', reservationExpiresAt)
+
+                ctx.cookies.set('checkout_session_id', reservation.checkoutSessionId, {
+                    httpOnly: true, // Set to false to see it in Application tab
+                    secure: process.env.NODE_ENV === 'production', // Ensure the cookie is only sent over HTTPS in production
+                    sameSite: 'strict', // Less restrictive, may help with cross-site issues
+                    expires: reservationExpiresAt,
+                    // 15 minutes in milliseconds
+                });
+
+                ctx.cookies.set('reservation_id', reservation.id, {
+                    httpOnly: true,
+                    secure: process.env.NODE_ENV === 'production',
+                    sameSite: 'strict', // Less restrictive, may help with cross-site issues
+                    expires: reservationExpiresAt,
+                });
 
 
-            // setTimeout(async () => {
-            //     // console.log('reservation', reservation);
-            //     if (reservation && new Date() > new Date(reservation.expiresAt)) {
-            //         await strapi.service('api::stock.stock').deleteReservation({ reservationId: reservation?.id, checkoutSessionId: reservation?.checkoutSessionId, userId });
-            //     }
-            // }, reservationDuration);
+                ctx.send({ message: 'Checkout session initialized successfully', validationResults });
+
+                setTimeout(async () => {
+                    // console.log('reservation', reservation);
+                    if (reservation && new Date() > new Date(reservation.expiresAt)) {
+                        await strapi.service('api::stock.stock').deleteReservation({ reservationId: reservation?.id, checkoutSessionId: reservation?.checkoutSessionId, userId });
+                    }
+                }, reservationDuration);
+            }
+            else {
+                ctx.send({ message: 'Checkeout session restored successfully', validationResults: null, sessionAlreadyExists: true });
+            }
+
+
+
 
         } catch (error) {
             console.error('Checkout initialization controller error:\n', error)
