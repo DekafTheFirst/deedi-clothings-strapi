@@ -39,7 +39,7 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
 
 
             const validItems = [...validationResults.success, ...validationResults.reduced]
-            console.log('validItems', validItems.map((item) => ({ title: item.productTitle, status: item.status })))
+            console.log('validItems', validItems.map((item) => ({ title: item.productTitle, size: item.size, status: item.status })))
 
             // console.log('reservationExpiresAt', reservationExpiresAt)
 
@@ -91,7 +91,7 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
             if (!checkoutSessionId) {
                 return ctx.badRequest('Missing checkout session ID.');
             }
-            
+
             console.log('reservationId', reservationId);
             console.log('checkoutSessionId', checkoutSessionId);
             await strapi.service('api::stock.stock').deleteReservation({ reservationId, checkoutSessionId, userId });

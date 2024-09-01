@@ -41,15 +41,18 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
                 populate: { images: true }
             });
 
+            
+
             console.log('product', product.images)
             if (!product) {
-                result = {
+                return {
                     message: 'Product not found',
                     status: 'out-of-stock',
-                    localCartItemId,
-                    productTitle: 'Unknown Product',
+                    productId,
+                    
                 };
-            }
+            };
+
             const { price, discountedPrice } = product
             const img = product?.images?.[0]?.formats?.thumbnail?.url || product?.images?.[0]?.url
             console.log('img', img)
@@ -65,11 +68,24 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
 
 
             if (!stock) {
-                result = {
+                return {
                     message: 'Stock not found',
                     status: 'out-of-stock',
+                    ...productDetails
                 };
             }
+
+            const productDetails = {
+                localCartItemId,
+                productTitle: product.title,
+                productId,
+                stockId: stock.id,
+                size,
+                img,
+                price: price,
+                discountedPrice: discountedPrice,
+            }
+            
             const availableStock = stock.stock;
 
             // Determine if we need to check against user cart items
@@ -80,6 +96,7 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
                     : await strapi.query('api::cart-item.cart-item').findOne({ where: { id: strapiCartItemId, cart: cartId } });
             }
 
+            console.log('availableStock', availableStock)
             if (availableStock <= 0) {
                 // Mark as out of stock in the cart
                 if (cartItem) {
@@ -88,10 +105,10 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
                     });
                 }
 
-                result = {
+                return {
                     message: 'Out of stock',
                     status: 'out-of-stock',
-                    size: size,
+                    ...productDetails,
                 };
             }
 
@@ -102,42 +119,34 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
                     });
                 }
 
-                result = {
+                return {
                     message: "Limited Stock",
                     status: 'reduced',
                     quantity: currentQuantity,
                     reducedBy: currentQuantity - availableStock,
                     newQuantity: availableStock,
                     availableStock,
+                    ...productDetails,
                 };
             }
 
-            result = {
+            return {
                 message: 'Success',
                 status: 'success',
                 quantity: currentQuantity,
                 availableStock,
+                ...productDetails
             }
-            return {
-                localCartItemId,
-                productTitle: stock.product.title,
-                productId,
-                stockId: stock.id,
-                size,
-                img,
-                price: price,
-                discountedPrice: discountedPrice,
-                ...result,
-            };
+
 
         } catch (error) {
+            console.error(error)
             return {
                 message: `Error validating stock: ${error.message}`,
                 status: 'validation-error',
                 localCartItemId,
                 productTitle: 'Unknown Product',
                 productId,
-                price: product.price,
             };
         }
     },
@@ -145,7 +154,7 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
     async batchValidateStock({ items, cartId, userId }) {
         // console.log('userId', userId)
         // console.log('cartId', cartId)
-        // console.log('items', items)
+        console.log('items', items)
 
         try {
             const userCartItems = cartId && await strapi.db.query('api::cart-item.cart-item').findMany({
@@ -173,11 +182,11 @@ module.exports = createCoreService('api::stock.stock', ({ strapi }) => ({
                 userCartItemsMap
             }));
 
-
-
-
+            
+            
             // Wait for all validation promises to complete
             const resultsArray = await Promise.all(validationPromises);
+            console.log('resultsArray', resultsArray)
 
             // Categorize results
             resultsArray.forEach(result => {
