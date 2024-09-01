@@ -849,6 +849,11 @@ export interface ApiBillingAddressBillingAddress extends Schema.CollectionType {
       'manyToOne',
       'plugin::users-permissions.user'
     >;
+    checkout: Attribute.Relation<
+      'api::billing-address.billing-address',
+      'oneToOne',
+      'api::checkout.checkout'
+    >;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;
@@ -985,6 +990,40 @@ export interface ApiCategoryCategory extends Schema.CollectionType {
       Attribute.Private;
     updatedBy: Attribute.Relation<
       'api::category.category',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+  };
+}
+
+export interface ApiCheckoutCheckout extends Schema.CollectionType {
+  collectionName: 'checkouts';
+  info: {
+    singularName: 'checkout';
+    pluralName: 'checkouts';
+    displayName: 'Checkout';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    billing_address: Attribute.Relation<
+      'api::checkout.checkout',
+      'oneToOne',
+      'api::billing-address.billing-address'
+    >;
+    createdAt: Attribute.DateTime;
+    updatedAt: Attribute.DateTime;
+    publishedAt: Attribute.DateTime;
+    createdBy: Attribute.Relation<
+      'api::checkout.checkout',
+      'oneToOne',
+      'admin::user'
+    > &
+      Attribute.Private;
+    updatedBy: Attribute.Relation<
+      'api::checkout.checkout',
       'oneToOne',
       'admin::user'
     > &
@@ -1423,6 +1462,7 @@ declare module '@strapi/types' {
       'api::cart.cart': ApiCartCart;
       'api::cart-item.cart-item': ApiCartItemCartItem;
       'api::category.category': ApiCategoryCategory;
+      'api::checkout.checkout': ApiCheckoutCheckout;
       'api::order.order': ApiOrderOrder;
       'api::product.product': ApiProductProduct;
       'api::shipping-address.shipping-address': ApiShippingAddressShippingAddress;

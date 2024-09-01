@@ -61,6 +61,12 @@
       "relation": "manyToOne",
       "target": "plugin::users-permissions.user",
       "inversedBy": "billing_addresses"
+    },
+    "checkout": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::checkout.checkout",
+      "mappedBy": "billing_address"
     }
   }
 }
