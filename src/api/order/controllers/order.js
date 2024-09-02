@@ -17,6 +17,9 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
     async create(ctx) {
         const { items, shippingInfo, billingInfo, totalAmount } = ctx.request.body;
         // console.log("items", items)
+        const checkoutSessionId = ctx.cookies.get('checkout_session_id');
+        console.log('checkoutSessionId', checkoutSessionId);
+
         console.log("billingInfo", billingInfo)
 
 
@@ -66,7 +69,7 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
         }
     },
 
-    
+
 
 
 
