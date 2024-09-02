@@ -9,6 +9,7 @@ const { createCoreController } = require('@strapi/strapi').factories;
 module.exports = createCoreController('api::checkout.checkout', ({ strapi }) => ({
     async initializeCheckout(ctx) {
         try {
+
             const checkoutSessionId = ctx.cookies.get('checkout_session_id');
             console.log('checkoutSessionId', checkoutSessionId)
             // Step 2: Validate and Reserve Stock
@@ -18,9 +19,9 @@ module.exports = createCoreController('api::checkout.checkout', ({ strapi }) => 
                 const { items, cartId, customerEmail } = ctx.request.body;
                 // console.log('user', user)
 
-                const reservationDuration = 1 * 1000;
-                const reservationExpiresAt = new Date(Date.now() + reservationDuration);
-                // Call your stock validation and reservation service
+                const checkoutSessionDuration = 5 * 1000;
+                const checkoutSessionExpiresAt = new Date(Date.now() + checkoutSessionDuration);
+                // Call your stock validation and checkoutSession service
 
 
                 const validationResults = await strapi.service('api::cart-item.cart-item').batchValidateCartItems({ items: items, cartId });
@@ -29,8 +30,8 @@ module.exports = createCoreController('api::checkout.checkout', ({ strapi }) => 
                 const reservableItems = [...validationResults.success, ...validationResults.reduced]
                 // console.log('reservableItems', reservableItems)
 
-                const reservation = await strapi.service('api::checkout.checkout').reserveStocks({ reservationItems: reservableItems, userId, expiresAt: reservationExpiresAt })
-                console.log('reservation', reservation)
+                const checkoutSession = await strapi.service('api::checkout.checkout').reserveStocks({ reservationItems: reservableItems, userId, expiresAt: checkoutSessionExpiresAt })
+                console.log('checkoutSession', checkoutSession)
 
 
 
@@ -39,38 +40,31 @@ module.exports = createCoreController('api::checkout.checkout', ({ strapi }) => 
                 const validItems = [...validationResults.success, ...validationResults.reduced]
                 console.log('validItems', validItems.map((item) => ({ title: item.productTitle, size: item.size, status: item.status })))
 
-                // console.log('reservationExpiresAt', reservationExpiresAt)
+                // console.log('checkoutSessionExpiresAt', checkoutSessionExpiresAt)
 
-                ctx.cookies.set('checkout_session_id', reservation.checkoutSessionId, {
+                ctx.cookies.set('checkout_session_id', checkoutSession.checkoutSessionId, {
                     httpOnly: true, // Set to false to see it in Application tab
                     secure: process.env.NODE_ENV === 'production', // Ensure the cookie is only sent over HTTPS in production
                     sameSite: 'strict', // Less restrictive, may help with cross-site issues
-                    expires: reservationExpiresAt,
+                    expires: checkoutSessionExpiresAt,
                     // 15 minutes in milliseconds
                 });
 
                 setTimeout(async () => {
-                    // console.log('reservation', reservation);
                     try {
-                        if (reservation && new Date() > new Date(reservation.expiresAt)) {
-                            await strapi.service('api::checkout.checkout').deleteReservation({ checkoutSessionId: reservation.checkoutSessionId, userId });
+                        if (checkoutSession && new Date() > new Date(checkoutSession.expiresAt)) {
+                            await strapi.service('api::checkout.checkout').deleteReservation({ checkoutSessionId: checkoutSession.checkoutSessionId, userId });
                         }
                     } catch (timeoutError) {
-                        console.error('Error clearing reservation in timeout:', timeoutError);
+                        console.error('Error clearing checkoutSession in timeout:', timeoutError);
                     }
-                }, reservationDuration);
+                }, checkoutSessionDuration);
 
-                ctx.send({ message: 'Checkout session initialized successfully', validationResults });
-
-
+                ctx.send({ message: 'Checkout session initialized successfully', validationResults, checkoutSessionDuration });
             }
             else {
-                ctx.send({ message: 'Checkeout session restored successfully', validationResults: null, sessionAlreadyExists: true });
+                ctx.send({ message: 'Checkout session re-initialized successfully' });
             }
-
-
-
-
         } catch (error) {
             console.error('Checkout initialization controller error:\n', error)
             return ctx.throw(500, 'An error occurred during checkout initialization.');
@@ -85,20 +79,20 @@ module.exports = createCoreController('api::checkout.checkout', ({ strapi }) => 
 
             const checkoutSessionId = ctx.cookies.get('checkout_session_id');
 
+            // console.log('checkoutSessionId', checkoutSessionId);
 
+            if (checkoutSessionId) {
+                await strapi.service('api::checkout.checkout').deleteReservation({ checkoutSessionId, userId });
 
-            if (!checkoutSessionId) {
-                return ctx.badRequest('Missing checkout session ID.');
+                ctx.cookies.set('checkout_session_id', '', {
+                    expires: new Date(0)
+                });
+
+                ctx.send({ message: 'Checkout session cleared successfully' });
             }
-
-            console.log('checkoutSessionId', checkoutSessionId);
-            await strapi.service('api::checkout.checkout').deleteReservation({ checkoutSessionId, userId });
-
-            ctx.cookies.set('checkout_session_id', '', {
-                expires: new Date(0)
-            });
-
-            ctx.send({ message: 'Checkout session cleared successfully' });
+            else {
+                ctx.send({ message: 'Checkout session cleared successfully' })
+            }
         }
         catch (error) {
             console.error(error)
@@ -125,5 +119,5 @@ module.exports = createCoreController('api::checkout.checkout', ({ strapi }) => 
             ctx.send({ success: false, message: error.message });
         }
     },
-    
+
 }));
