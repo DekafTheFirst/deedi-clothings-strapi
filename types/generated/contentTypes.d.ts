@@ -1004,7 +1004,9 @@ export interface ApiCheckoutCheckout extends Schema.CollectionType {
       'oneToOne',
       'plugin::users-permissions.user'
     >;
-    status: Attribute.Enumeration<['active', 'expired', 'completed']>;
+    status: Attribute.Enumeration<
+      ['active', 'payment_pending', 'completed', 'expired']
+    >;
     expiresAt: Attribute.DateTime & Attribute.Required;
     stock_reservation_items: Attribute.Relation<
       'api::checkout.checkout',
@@ -1012,6 +1014,7 @@ export interface ApiCheckoutCheckout extends Schema.CollectionType {
       'api::stock-reservation-item.stock-reservation-item'
     >;
     checkoutSessionId: Attribute.UID;
+    stripeId: Attribute.UID;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;
@@ -1078,6 +1081,7 @@ export interface ApiOrderOrder extends Schema.CollectionType {
       'manyToOne',
       'plugin::users-permissions.user'
     >;
+    customerEmail: Attribute.Email;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;

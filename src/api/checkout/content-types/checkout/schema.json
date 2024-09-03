@@ -21,8 +21,9 @@
       "type": "enumeration",
       "enum": [
         "active",
-        "expired",
-        "completed"
+        "payment_pending",
+        "completed",
+        "expired"
       ]
     },
     "expiresAt": {
@@ -36,6 +37,9 @@
       "mappedBy": "checkout"
     },
     "checkoutSessionId": {
+      "type": "uid"
+    },
+    "stripeId": {
       "type": "uid"
     }
   }

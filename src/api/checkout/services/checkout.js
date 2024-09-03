@@ -25,7 +25,7 @@ function generateSessionId(userId = null) {
 module.exports = createCoreService('api::checkout.checkout', ({ strapi }) => ({
     async reserveStocks({ reservationItems, userId, expiresAt }) {
 
-        console.log('reservationItems', reservationItems);
+        // console.log('reservationItems', reservationItems);
         // console.log('expiresAt', expiresAt);
 
         // console.log('userId', userId)
@@ -113,48 +113,54 @@ module.exports = createCoreService('api::checkout.checkout', ({ strapi }) => ({
                 }
             });
 
+
             if (checkoutSession) {
-                const reservedItems = checkoutSession.stock_reservation_items;
-                const reservedItemIds = reservedItems.map(item => item.id);
-                console.log('reservedItemIds', reservedItemIds);
+                if (checkoutSession.status != 'payment_pending') {
 
-                // Prepare stock updates
-                const stockUpdates = reservedItems.map(reservedItem => ({
-                    id: reservedItem.stock.id,
-                    reserved: reservedItem.quantity,
-                    availableStock: reservedItem.stock.stock
-                }));
+                    const reservedItems = checkoutSession.stock_reservation_items;
+                    const reservedItemIds = reservedItems.map(item => item.id);
+                    // console.log('reservedItemIds', reservedItemIds);
 
-                console.log('stockUpdates', stockUpdates);
+                    // Prepare stock updates
+                    const stockUpdates = reservedItems.map(reservedItem => ({
+                        id: reservedItem.stock.id,
+                        reserved: reservedItem.quantity,
+                        availableStock: reservedItem.stock.stock
+                    }));
 
-                // Update stocks
-                const updatedStocks = await Promise.all(
-                    stockUpdates.map(stock =>
-                        strapi.entityService.update('api::stock.stock', stock.id, {
-                            data: {
-                                stock: stock.availableStock + stock.reserved,
-                            }
-                        })
-                    )
-                );
+                    // console.log('stockUpdates', stockUpdates);
 
-                console.log('updatedStocks', updatedStocks);
+                    // Update stocks
+                    const updatedStocks = await Promise.all(
+                        stockUpdates.map(stock =>
+                            strapi.entityService.update('api::stock.stock', stock.id, {
+                                data: {
+                                    stock: stock.availableStock + stock.reserved,
+                                }
+                            })
+                        )
+                    );
 
-                // Delete checkoutSession items
-                const { count: noOfReservationItemsDeleted } = await strapi.db.query('api::stock-reservation-item.stock-reservation-item').deleteMany({
-                    where: {
-                        id: {
-                            $in: reservedItemIds,
+                    // console.log('updatedStocks', updatedStocks);
+
+                    // Delete checkoutSession items
+                    const { count: noOfReservationItemsDeleted } = await strapi.db.query('api::stock-reservation-item.stock-reservation-item').deleteMany({
+                        where: {
+                            id: {
+                                $in: reservedItemIds,
+                            },
                         },
-                    },
-                });
+                    });
 
-                console.log('noOfReservationItemsDeleted', noOfReservationItemsDeleted);
+                    // console.log('noOfReservationItemsDeleted', noOfReservationItemsDeleted);
 
-                // Delete checkoutSession
-                const deletedCheckoutSession = await strapi.db.query('api::checkout.checkout').delete({ where: { checkoutSessionId } });
-                console.log('deletedCheckoutSession', deletedCheckoutSession);
-                return { message: 'Session Cleared Successfully' }
+                    // Delete checkoutSession
+                    const deletedCheckoutSession = await strapi.db.query('api::checkout.checkout').delete({ where: { checkoutSessionId } });
+                    return { message: 'Session Cleared Successfully' }
+                }
+                else {
+                    return { message: 'Payment has already been initiated, will wait another 15mins before clearing session' }
+                }
             }
             else {
                 console.log('Checkout session already cleared')

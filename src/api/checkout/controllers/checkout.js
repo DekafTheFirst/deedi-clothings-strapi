@@ -11,7 +11,7 @@ module.exports = createCoreController('api::checkout.checkout', ({ strapi }) => 
         try {
 
             const checkoutSessionId = ctx.cookies.get('checkout_session_id');
-            console.log('checkoutSessionId', checkoutSessionId)
+            // console.log('checkoutSessionId', checkoutSessionId)
             // Step 2: Validate and Reserve Stock
             if (!checkoutSessionId) {
                 const user = ctx.state.user;
@@ -19,7 +19,7 @@ module.exports = createCoreController('api::checkout.checkout', ({ strapi }) => 
                 const { items, cartId, customerEmail } = ctx.request.body;
                 // console.log('user', user)
 
-                const checkoutSessionDuration = 30 * 1000;
+                const checkoutSessionDuration = 20 * 1000;
                 const checkoutSessionExpiresAt = new Date(Date.now() + checkoutSessionDuration);
                 // Call your stock validation and checkoutSession service
 
@@ -31,14 +31,14 @@ module.exports = createCoreController('api::checkout.checkout', ({ strapi }) => 
                 // console.log('reservableItems', reservableItems)
 
                 const checkoutSession = await strapi.service('api::checkout.checkout').reserveStocks({ reservationItems: reservableItems, userId, expiresAt: checkoutSessionExpiresAt })
-                console.log('checkoutSession', checkoutSession)
+                // console.log('checkoutSession', checkoutSession)
 
 
 
 
 
                 const validItems = [...validationResults.success, ...validationResults.reduced]
-                console.log('validItems', validItems.map((item) => ({ title: item.productTitle, size: item.size, status: item.status })))
+                // console.log('validItems', validItems.map((item) => ({ title: item.productTitle, size: item.size, status: item.status })))
 
                 // console.log('checkoutSessionExpiresAt', checkoutSessionExpiresAt)
 
@@ -50,16 +50,7 @@ module.exports = createCoreController('api::checkout.checkout', ({ strapi }) => 
                     // 15 minutes in milliseconds
                 });
 
-                setTimeout(async () => {
-                    try {
-                        if (checkoutSession && new Date() > new Date(checkoutSession.expiresAt)) {
-                            await strapi.service('api::checkout.checkout').deleteReservation({ checkoutSessionId: checkoutSession.checkoutSessionId, userId });
-                        }
-                    } catch (timeoutError) {
-                        console.error('Error clearing checkoutSession in timeout:', timeoutError);
-                    }
-                }, checkoutSessionDuration);
-
+                
                 ctx.send({ message: 'Checkout session initialized successfully', validationResults, checkoutSessionDuration, checkoutSessionExpiresAt, checkoutSessionAlreadyExists: false });
             }
             else {
@@ -87,6 +78,7 @@ module.exports = createCoreController('api::checkout.checkout', ({ strapi }) => 
                 ctx.cookies.set('checkout_session_id', '', {
                     expires: new Date(0)
                 });
+                console.log('checkout session cookie cleared')
 
                 ctx.send({ message: 'Checkout session cleared successfully' });
             }

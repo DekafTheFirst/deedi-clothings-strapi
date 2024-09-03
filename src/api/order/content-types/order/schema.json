@@ -91,6 +91,9 @@
       "relation": "manyToOne",
       "target": "plugin::users-permissions.user",
       "inversedBy": "orders"
+    },
+    "customerEmail": {
+      "type": "email"
     }
   }
 }
