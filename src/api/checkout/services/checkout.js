@@ -56,11 +56,11 @@ module.exports = createCoreService('api::checkout.checkout', ({ strapi }) => ({
 
             // console.log({ status, quantityToReserve })
 
-            const updatedStock = await strapi.entityService.update("api::stock.stock", stockId, {
-                data: {
-                    stock: availableStock - quantityToReserve
-                }
-            })
+            // const updatedStock = await strapi.entityService.update("api::stock.stock", stockId, {
+            //     data: {
+            //         stock: availableStock - quantityToReserve
+            //     }
+            // })
 
             // console.log('updatedStock', updatedStock.stock)
 

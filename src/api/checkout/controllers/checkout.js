@@ -19,7 +19,7 @@ module.exports = createCoreController('api::checkout.checkout', ({ strapi }) => 
                 const { items, cartId, customerEmail } = ctx.request.body;
                 // console.log('user', user)
 
-                const checkoutSessionDuration = 60 * 1000;
+                const checkoutSessionDuration = 30 * 1000;
                 const checkoutSessionExpiresAt = new Date(Date.now() + checkoutSessionDuration);
                 // Call your stock validation and checkoutSession service
 
@@ -67,7 +67,7 @@ module.exports = createCoreController('api::checkout.checkout', ({ strapi }) => 
             }
         } catch (error) {
             console.error('Checkout initialization controller error:\n', error)
-            return ctx.throw(500, 'An error occurred during checkout initialization.' );
+            return ctx.throw(500, 'An error occurred during checkout initialization.');
         }
     },
 

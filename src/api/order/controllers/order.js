@@ -17,7 +17,16 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
     async create(ctx) {
         const { items, shippingInfo, billingInfo, totalAmount } = ctx.request.body;
         // console.log("items", items)
+        const user = ctx.state.user;
+        const userId = user?.id;
+        console.log('userId', userId);
+
         const checkoutSessionId = ctx.cookies.get('checkout_session_id');
+
+        if (!checkoutSessionId) {
+            ctx.badRequest('Your session has expired, try again.')
+        }
+
         console.log('checkoutSessionId', checkoutSessionId);
 
         console.log("billingInfo", billingInfo)
@@ -50,18 +59,21 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
                 payment_method_types: ['card'],
             });
 
+            // console.log('session', session)
+
             const createdOrder = await strapi.service('api::order.order').create({
                 data: {
                     items,
                     stripeId: session.id,
                     shippingInfo,
                     billingInfo,
+                    user: userId,
                     // courierId: selectedCourierId,
                     totalAmount
                 },
             });
 
-            return createdOrder;
+            return { sessionId: session.id };
         } catch (err) {
             console.log(err)
             ctx.response.status = 500;
@@ -189,7 +201,7 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
         const sig = ctx?.request.headers['stripe-signature'];
         const endpointSecret = "whsec_8ae6fbe7f7642ac26851cdf79de27ce529aa0f40d1f78f4f31fc2746deac90cd";
 
-
+        // console.log('endpointSecret', endpointSecret)
         let event;
 
         try {
@@ -216,13 +228,17 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
                     where: { stripeId: session.id },
                 });
 
+                const user = ctx.state.user;
+                const userId = user?.id;
+                console.log('payment success');
+
                 // console.log('session.id', session.id)
                 // console.log('order', order)
 
                 if (order) {
                     // Update order status to "paid"
                     const updatedOrder = await strapi.db.query('api::order.order').update({
-                        where: { id: order.id },
+                        where: { id: order.id, user: userId },
                         data: { status: 'paid' },
                     });
 
@@ -347,6 +363,16 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
 
 
                 }
+
+                const checkoutSessionId = ctx.cookies.get('checkout_session_id');
+
+                if (!checkoutSessionId) {
+                    ctx.badRequest('Your session has expired, try again.')
+                }
+
+                console.log('checkoutSessionId', checkoutSessionId);
+
+                const deletedCheckoutSession = await strapi.service('api::checkout.checkout').deleteReservation({ checkoutSessionId, userId });
                 break;
 
             // Handle other event types if needed
