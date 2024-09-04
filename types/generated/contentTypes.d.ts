@@ -1014,7 +1014,8 @@ export interface ApiCheckoutCheckout extends Schema.CollectionType {
       'api::stock-reservation-item.stock-reservation-item'
     >;
     checkoutSessionId: Attribute.UID;
-    stripeId: Attribute.UID;
+    stripeSessionId: Attribute.UID;
+    expired: Attribute.Boolean;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;
@@ -1045,11 +1046,18 @@ export interface ApiOrderOrder extends Schema.CollectionType {
     draftAndPublish: true;
   };
   attributes: {
-    stripeId: Attribute.String;
+    stripeSessionId: Attribute.String;
     items: Attribute.JSON;
     courierId: Attribute.String;
     status: Attribute.Enumeration<
-      ['pending', 'paid', 'shipped', 'delivered', 'cancelled']
+      [
+        'pending',
+        'paid',
+        'shipped',
+        'delivered',
+        'cancelled',
+        'checkout_session_expired'
+      ]
     > &
       Attribute.DefaultTo<'pending'>;
     totalAmount: Attribute.Float;
@@ -1082,6 +1090,7 @@ export interface ApiOrderOrder extends Schema.CollectionType {
       'plugin::users-permissions.user'
     >;
     customerEmail: Attribute.Email;
+    checkoutSessionId: Attribute.UID;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;

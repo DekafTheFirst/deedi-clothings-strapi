@@ -97,7 +97,7 @@ module.exports = createCoreService('api::checkout.checkout', ({ strapi }) => ({
 
 
 
-    async deleteReservation({ checkoutSessionId, userId }) {
+    async endCheckoutSession({ checkoutSessionId, userId }) {
 
         try {
             // console.log('checkoutSessionId', checkoutSessionId);
@@ -155,7 +155,7 @@ module.exports = createCoreService('api::checkout.checkout', ({ strapi }) => ({
                     // console.log('noOfReservationItemsDeleted', noOfReservationItemsDeleted);
 
                     // Delete checkoutSession
-                    const deletedCheckoutSession = await strapi.db.query('api::checkout.checkout').delete({ where: { checkoutSessionId } });
+                    const expiredCheckoutSession = await strapi.db.query('api::checkout.checkout').update({ where: { checkoutSessionId }, data: { expired: true } });
                     return { message: 'Session Cleared Successfully' }
                 }
                 else {

@@ -19,7 +19,7 @@ module.exports = createCoreController('api::checkout.checkout', ({ strapi }) => 
                 const { items, cartId, customerEmail } = ctx.request.body;
                 // console.log('user', user)
 
-                const checkoutSessionDuration = 20 * 1000;
+                const checkoutSessionDuration = 10 * 1000;
                 const checkoutSessionExpiresAt = new Date(Date.now() + checkoutSessionDuration);
                 // Call your stock validation and checkoutSession service
 
@@ -50,10 +50,11 @@ module.exports = createCoreController('api::checkout.checkout', ({ strapi }) => 
                     // 15 minutes in milliseconds
                 });
 
-                
+                console.log('Checkout session initialized successfully')
                 ctx.send({ message: 'Checkout session initialized successfully', validationResults, checkoutSessionDuration, checkoutSessionExpiresAt, checkoutSessionAlreadyExists: false });
             }
             else {
+                console.log('Checkout session restored successfully')
                 ctx.send({ message: 'Checkout session re-initialized successfully', validationResults: null, checkoutSessionAlreadyExists: true });
             }
         } catch (error) {
@@ -70,19 +71,19 @@ module.exports = createCoreController('api::checkout.checkout', ({ strapi }) => 
 
             const checkoutSessionId = ctx.cookies.get('checkout_session_id');
 
-            // console.log('checkoutSessionId', checkoutSessionId);
+            console.log('checkoutSessionId', checkoutSessionId);
 
             if (checkoutSessionId) {
-                await strapi.service('api::checkout.checkout').deleteReservation({ checkoutSessionId, userId });
+                await strapi.service('api::checkout.checkout').endCheckoutSession({ checkoutSessionId, userId });
 
                 ctx.cookies.set('checkout_session_id', '', {
                     expires: new Date(0)
                 });
                 console.log('checkout session cookie cleared')
-
                 ctx.send({ message: 'Checkout session cleared successfully' });
             }
             else {
+                console.log('Checkout session has expired')
                 ctx.send({ message: 'Checkout session cleared successfully' })
             }
         }

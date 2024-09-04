@@ -12,7 +12,7 @@
   },
   "pluginOptions": {},
   "attributes": {
-    "stripeId": {
+    "stripeSessionId": {
       "type": "string"
     },
     "items": {
@@ -28,7 +28,8 @@
         "paid",
         "shipped",
         "delivered",
-        "cancelled"
+        "cancelled",
+        "checkout_session_expired"
       ],
       "default": "pending"
     },
@@ -94,6 +95,9 @@
     },
     "customerEmail": {
       "type": "email"
+    },
+    "checkoutSessionId": {
+      "type": "uid"
     }
   }
 }

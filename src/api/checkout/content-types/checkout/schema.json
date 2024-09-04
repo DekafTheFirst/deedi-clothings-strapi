@@ -39,8 +39,11 @@
     "checkoutSessionId": {
       "type": "uid"
     },
-    "stripeId": {
+    "stripeSessionId": {
       "type": "uid"
+    },
+    "expired": {
+      "type": "boolean"
     }
   }
 }
