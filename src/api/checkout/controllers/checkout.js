@@ -19,7 +19,7 @@ module.exports = createCoreController('api::checkout.checkout', ({ strapi }) => 
                 const { items, cartId, customerEmail } = ctx.request.body;
                 // console.log('user', user)
 
-                const checkoutSessionDuration = 10 * 1000;
+                const checkoutSessionDuration = 20 * 60 * 1000;
                 const checkoutSessionExpiresAt = new Date(Date.now() + checkoutSessionDuration);
                 // Call your stock validation and checkoutSession service
 
