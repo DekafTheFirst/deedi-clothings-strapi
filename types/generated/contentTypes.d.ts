@@ -1013,9 +1013,9 @@ export interface ApiCheckoutCheckout extends Schema.CollectionType {
       'oneToMany',
       'api::stock-reservation-item.stock-reservation-item'
     >;
-    checkoutSessionId: Attribute.UID;
-    stripeSessionId: Attribute.UID;
     expired: Attribute.Boolean;
+    stripePaymentIntentId: Attribute.String;
+    checkoutSessionId: Attribute.String;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;

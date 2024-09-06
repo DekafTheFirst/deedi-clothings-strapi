@@ -22,33 +22,37 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
         const userId = user?.id;
         console.log('userId', userId);
 
-        const checkoutSessionId = ctx.cookies.get('checkout_session_id') || null;
-        console.log('checkoutSessionId', checkoutSessionId);
+        const checkoutSessionIdCookie = ctx.cookies.get('checkout_session_id') || null;
+        console.log('checkoutSessionIdCookie', checkoutSessionIdCookie);
 
-
-
-        if (!checkoutSessionId) {
-            ctx.throw(500, 'Session Doesn\'t exist or has expired.')
+        if (!checkoutSessionIdCookie) {
+            ctx.throw(410, 'Checkout session has expired')
         }
 
 
-        // console.log('checkoutSessionId', checkoutSessionId);
+        // console.log('checkoutSessionIdCookie', checkoutSessionIdCookie);
 
         // console.log("billingInfo", billingInfo)
 
         const checkoutSession = await strapi.db.query("api::checkout.checkout").findOne({
-            where: { checkoutSessionId },
+            where: { checkoutSessionId: checkoutSessionIdCookie },
         })
 
         console.log('checkoutSession', checkoutSession);
 
-        if (checkoutSession) {
-            ctx.send({ message: 'order retrieved', sessionId: checkoutSession.stripeSessionId })
+        if (checkoutSession.stripePaymentIntentId) {
+            const retrievedaymentIntent = await stripe.paymentIntents.retrieve(checkoutSession.stripePaymentIntentId);
+            console.log('retrievedaymentIntent retrieved', retrievedaymentIntent)
+
+            if (retrievedaymentIntent?.status === "succeeded") {
+                ctx.send({ message: 'Payment Already Succeeded', sessionId: checkoutSession.stripeSessionId, clientSecret: retrievedaymentIntent?.client_secret, paymentAlreadySucceeded: true })
+            }   
+            else {
+                ctx.send({ message: 'Payment Intent Retrieved', sessionId: checkoutSession.stripeSessionId, clientSecret: retrievedaymentIntent?.client_secret })
+            }
             return;
         }
-        else {
-            ctx.send({ message: 'Order not found, your checkout sesion is expired' })
-        }
+
 
         try {
             const productIds = items.map(item => item.productId);
@@ -61,28 +65,22 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
             // Create a map of products by their ID for quick lookup
             const productMap = new Map(products.map(product => [product.id, product]));
 
-            console.log('productMap', productMap)
-            const lineItems = items.map(item => {
+            // console.log('productMap', productMap)
+
+
+            const totalAmount = items.reduce((total, item) => {
                 const product = productMap.get(item.productId);
-
-                if (!product) {
-                    throw new Error(`Product with ID ${item.productId} not found`);
+                if (product) {
+                    const itemTotal = product.price * item.quantity; // Assuming product has a `price` field and item has a `quantity`
+                    return total + itemTotal;
                 }
+                return total;
+            }, 0);
 
-                return {
-                    price_data: {
-                        currency: 'usd',
-                        product_data: {
-                            name: product.title,
-                        },
-                        unit_amount: Math.round(product.price * 100),
-                    },
-                    quantity: item.quantity,
-                };
-            });
+            // const currentTime = Date.now()
+            // const stripeSessionExpiresAt = new Date(currentTime + 30 * 60 * 1000);
 
-            const currentTime = Date.now()
-            const stripeSessionExpiresAt = new Date(currentTime + 30 * 60 * 1000);
+
 
 
             const createdOrder = await strapi.service('api::order.order').create({
@@ -97,7 +95,7 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
                             price: productMap.get(item.productId).price
                         })
                     }),
-                    checkoutSessionId,
+                    checkoutSessionId: checkoutSessionIdCookie,
                     shippingInfo,
                     billingInfo,
                     user: userId,
@@ -110,57 +108,30 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
                 populate: ['user']
             });
 
-
-
-            console.log('createdOrder', createdOrder.id)
-
-            const session = await stripe.checkout.sessions.create({
-                mode: 'payment',
-                line_items: lineItems,
-                customer_email: billingInfo?.email,
-                payment_method_types: ['card'],
-                cancel_url: `${process.env.CLIENT_URL}/cart`,
-                success_url: `${process.env.CLIENT_URL}/checkout-success?session_id={CHECKOUT_SESSION_ID}`,
-                expires_at: stripeSessionExpiresAt,
+            const paymentIntent = await stripe.paymentIntents.create({
+                currency: "usd",
+                amount: totalAmount,
+                automatic_payment_methods: { enabled: true },
                 metadata: {
-                    checkoutSessionId,
+                    checkoutSessionId: checkoutSession.id,
                     orderId: createdOrder.id
                 }
             });
 
-            // setTimeout(async () => {
-            //     try {
-            //         const currentStateOfSession = await stripe.checkout.sessions.retrieve(session.id)
-            //         if (currentStateOfSession.status === "open") {
-            //             await stripe.checkout.sessions.expire(session.id)
-            //             console.log('stripe session expired,, from timeout')
-            //         }
-            //     }
-            //     catch (error) {
-            //         console.log('Error in timeout', error)
-            //     }
-            // }, 10 * 1000)
+            const updatedCheckoutSession = await strapi.entityService.update("api::checkout.checkout", checkoutSession.id, {
+                data: { stripePaymentIntentId: paymentIntent.id },
+            })
 
-            if (!checkoutSessionId) {
-                console.log('no session')
-                ctx.badRequest('Your session has expired, please try again.')
-            }
+            console.log('paymentIntent created successfully', paymentIntent)
 
-            const updatedCheckoutSession = await strapi.db.query("api::checkout.checkout").update({
-                where: {
-                    checkoutSessionId,
-                    user: userId,
-                },
-                data: {
-                    stripeSessionId: session.id,
-                }
+            // console.log('createdOrder', createdOrder.id)
+
+
+            // Send publishable key and PaymentIntent details to client
+            ctx.send({
+                clientSecret: paymentIntent.client_secret,
             });
-            // console.log('updatedCheckoutSession', updatedCheckoutSession)
 
-
-            console.warn('Stripe session created successfully')
-
-            ctx.send({ sessionId: session.id });
         } catch (err) {
             console.error(err.message || err)
             ctx.response.status = 500;
@@ -315,20 +286,24 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
 
         let event;
 
+
         try {
             const raw = ctx?.request.body?.[Symbol.for('unparsedBody')];
 
             // console.log("RAWBODY",raw)
             event = stripe.webhooks.constructEvent(raw, sig, endpointSecret);
+
         } catch (err) {
             console.log(`Webhook error: ${err.message}`);
             ctx.response.status = 400;
             return { error: 'Webhook error: ' + err.message };
         }
 
-        const session = event.data.object;
-        console.log('session meta data', session.metadata);
-        const sessionMetadata = session?.metadata
+
+
+        const paymentIntent = event.data.object;
+        // console.log('paymentIntent meta data', paymentIntent.metadata);
+        const paymentIntentMetaData = paymentIntent?.metadata
 
         let updatedOrder;
 
@@ -338,13 +313,13 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
             //     await strapi.service('api::product.product').delete({ stripeProductId: deletedProduct.id });
             //     break;
 
-            case 'checkout.session.completed':
+            case 'payment_intent.succeeded':
 
 
-                updatedOrder = await strapi.entityService.update('api::order.order', sessionMetadata?.orderId, {
+                updatedOrder = await strapi.entityService.update('api::order.order', paymentIntentMetaData?.orderId, {
                     data: {
                         status: 'paid',
-                        stripeSessionId: session.id,
+                        stripeSessionId: paymentIntent.id,
                     }
                 })
 
@@ -360,7 +335,7 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
 
                 console.log('payment success');
 
-                // console.log('session.id', session.id)
+                // console.log('paymentIntent.id', paymentIntent.id)
                 // console.log('order', order)
 
                 // Update order status to "paid"
@@ -483,25 +458,30 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
                 //     console.error('Easyship API error:', error.response?.data?.error || error.message);
                 // }
 
-                const deltedCheckoutSession = await strapi.entityService.delete("api::checkout.checkout", sessionMetadata?.checkoutSessionId);
-                console.log('Checkout Session deleted successfully');
+                const updatedCheckoutSession = await strapi.entityService.update("api::checkout.checkout", paymentIntentMetaData?.checkoutSessionId, {
+                    data: { status: 'completed' }
+                });
+
+                console.log('updatedCheckoutSession', updatedCheckoutSession.status)
+
+                console.log('Checkout session completed successfully');
                 break;
 
             case 'checkout.session.expired':
                 // console.log('session', session)
                 try {
-                    if (sessionMetadata) {
+                    if (paymentIntentMetaData) {
                         console.log('stripe session expired')
 
-                        updatedOrder = await strapi.entityService.update('api::order.order', sessionMetadata?.orderId, {
+                        updatedOrder = await strapi.entityService.update('api::order.order', paymentIntentMetaData?.orderId, {
                             data: { status: 'checkout_session_expired' }
                         })
                         console.log('updatedOrder', updatedOrder?.id)
 
-                        const endedheckoutSession = await strapi.service("api::checkout.checkout").endCheckoutSession({ checkoutSessionId: sessionMetadata.checkoutSessionId })
+                        const endedheckoutSession = await strapi.service("api::checkout.checkout").endCheckoutSession({ checkoutSessionId: paymentIntentMetaData.checkoutSessionId })
                         console.log(endedheckoutSession?.message)
 
-                        const deltedCheckoutSession = await strapi.entityService.delete("api::checkout.checkout", sessionMetadata?.checkoutSessionId);
+                        const deltedCheckoutSession = await strapi.entityService.delete("api::checkout.checkout", paymentIntentMetaData?.checkoutSessionId);
                         console.log('Checkout Session deleted successfully')
                     }
                     else {

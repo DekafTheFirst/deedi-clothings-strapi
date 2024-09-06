@@ -36,14 +36,14 @@
       "target": "api::stock-reservation-item.stock-reservation-item",
       "mappedBy": "checkout"
     },
-    "checkoutSessionId": {
-      "type": "uid"
-    },
-    "stripeSessionId": {
-      "type": "uid"
-    },
     "expired": {
       "type": "boolean"
+    },
+    "stripePaymentIntentId": {
+      "type": "string"
+    },
+    "checkoutSessionId": {
+      "type": "string"
     }
   }
 }
