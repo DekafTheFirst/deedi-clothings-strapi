@@ -26,7 +26,7 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
         console.log('checkoutSessionIdCookie', checkoutSessionIdCookie);
 
         if (!checkoutSessionIdCookie) {
-            ctx.throw(410, 'Checkout session has expired')
+            return ctx.gone('Checkout session has expired', {})
         }
 
 
@@ -45,10 +45,11 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
             console.log('retrievedaymentIntent retrieved', retrievedaymentIntent)
 
             if (retrievedaymentIntent?.status === "succeeded") {
-                ctx.send({ message: 'Payment Already Succeeded', sessionId: checkoutSession.stripeSessionId, clientSecret: retrievedaymentIntent?.client_secret, paymentAlreadySucceeded: true })
-            }   
+                // Conflict
+                return ctx.conflict('This payment has already been processed. Please check your order history or contact support for assistance.', { error: 'This payment has already been processed. Please check your order history or contact support for assistance.' });
+            }
             else {
-                ctx.send({ message: 'Payment Intent Retrieved', sessionId: checkoutSession.stripeSessionId, clientSecret: retrievedaymentIntent?.client_secret })
+                ctx.body = { message: 'Payment Intent Retrieved', sessionId: checkoutSession.stripeSessionId, clientSecret: retrievedaymentIntent?.client_secret }
             }
             return;
         }

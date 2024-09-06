@@ -24,24 +24,23 @@ module.exports = createCoreController('api::checkout.checkout', ({ strapi }) => 
                 if (foundCheckoutSession) {
                     const currentTime = new Date();
                     const checkoutSessionExpiryDate = new Date(foundCheckoutSession.expiresAt)
+                    if (foundCheckoutSession.status === "expired" || currentTime > checkoutSessionExpiryDate) {
+                        ctx.cookies.set('checkout_session_id', '', {
+                            expires: new Date(0)
+                        });
+                        return ({ message: 'Session has expired', status: 'expired' })
+                    }
 
-                    if (foundCheckoutSession.status == 'completed' || foundCheckoutSession.status !== "active") {
+                    if (foundCheckoutSession.status === 'completed' || foundCheckoutSession.status !== "active") {
                         ctx.cookies.set('checkout_session_id', '', {
                             expires: new Date(0)
                         });
                         return ({ message: 'Session has already been completed', status: 'completed' })
                     }
-
-                    if (foundCheckoutSession.status === "expired" || currentTime > checkoutSessionExpiryDate) {
-                        return ({ message: 'Session has expired', status: 'expired' })
-
-                    }
-
-
                 }
 
                 console.log('Checkout session restored successfully',)
-                ctx.send({ message: 'Checkout session re-initialized successfully', status: 're-initialized', validationResults: null, status: 're-initialized' });
+                ctx.send({ message: 'Checkout session re-initialized successfully', validationResults: null, status: 're-initialized' });
             }
             else {
                 const user = ctx.state.user;
@@ -49,7 +48,7 @@ module.exports = createCoreController('api::checkout.checkout', ({ strapi }) => 
                 const { items, cartId, customerEmail } = ctx.request.body;
                 // console.log('user', user)
 
-                const checkoutSessionDuration = 5 * 1000;
+                const checkoutSessionDuration = 20 * 60 * 1000;
                 const checkoutSessionExpiresAt = new Date(Date.now() + checkoutSessionDuration);
                 // Call your stock validation and checkoutSession service
 
@@ -81,8 +80,7 @@ module.exports = createCoreController('api::checkout.checkout', ({ strapi }) => 
                 });
 
                 console.log('Checkout session initialized successfully')
-                ctx.send({ message: 'Checkout session initialized successfully', status: 'initialized', validationResults, checkoutSessionDuration, checkoutSessionExpiresAt, checkoutSessionAlreadyExists: false });
-
+                ctx.send({ message: 'Checkout session initialized successfully', validationResults, checkoutSessionDuration, checkoutSessionExpiresAt, checkoutSessionAlreadyExists: false });
 
             }
         } catch (error) {
