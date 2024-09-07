@@ -51,12 +51,6 @@
       "type": "string",
       "required": true
     },
-    "orders": {
-      "type": "relation",
-      "relation": "oneToMany",
-      "target": "api::order.order",
-      "mappedBy": "shipping_address"
-    },
     "user": {
       "type": "relation",
       "relation": "manyToOne",

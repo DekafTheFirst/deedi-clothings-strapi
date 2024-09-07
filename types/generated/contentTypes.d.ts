@@ -770,7 +770,6 @@ export interface PluginUsersPermissionsUser extends Schema.CollectionType {
       'manyToOne',
       'plugin::users-permissions.role'
     >;
-    photoUrl: Attribute.String;
     orders: Attribute.Relation<
       'plugin::users-permissions.user',
       'oneToMany',
@@ -795,6 +794,10 @@ export interface PluginUsersPermissionsUser extends Schema.CollectionType {
       'plugin::users-permissions.user',
       'oneToOne',
       'api::wishlist.wishlist'
+    >;
+    profilePhoto: Attribute.Media<
+      'images' | 'files' | 'videos' | 'audios',
+      true
     >;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
@@ -834,11 +837,6 @@ export interface ApiBillingAddressBillingAddress extends Schema.CollectionType {
     postalCode: Attribute.String & Attribute.Required;
     state: Attribute.String & Attribute.Required;
     country: Attribute.String & Attribute.Required;
-    orders: Attribute.Relation<
-      'api::billing-address.billing-address',
-      'oneToMany',
-      'api::order.order'
-    >;
     user: Attribute.Relation<
       'api::billing-address.billing-address',
       'manyToOne',
@@ -1061,16 +1059,6 @@ export interface ApiOrderOrder extends Schema.CollectionType {
     > &
       Attribute.DefaultTo<'pending'>;
     totalAmount: Attribute.Float;
-    shipping_address: Attribute.Relation<
-      'api::order.order',
-      'manyToOne',
-      'api::shipping-address.shipping-address'
-    >;
-    billing_address: Attribute.Relation<
-      'api::order.order',
-      'manyToOne',
-      'api::billing-address.billing-address'
-    >;
     shipmentId: Attribute.String;
     trackingPageUrl: Attribute.String;
     shipmentStatus: Attribute.String;
@@ -1091,6 +1079,8 @@ export interface ApiOrderOrder extends Schema.CollectionType {
     >;
     customerEmail: Attribute.Email;
     checkoutSessionId: Attribute.UID;
+    billingAddress: Attribute.JSON;
+    shipppingAddress: Attribute.JSON;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;
@@ -1187,11 +1177,6 @@ export interface ApiShippingAddressShippingAddress
     postalCode: Attribute.String & Attribute.Required;
     state: Attribute.String & Attribute.Required;
     country: Attribute.String & Attribute.Required;
-    orders: Attribute.Relation<
-      'api::shipping-address.shipping-address',
-      'oneToMany',
-      'api::order.order'
-    >;
     user: Attribute.Relation<
       'api::shipping-address.shipping-address',
       'manyToOne',

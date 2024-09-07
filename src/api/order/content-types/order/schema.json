@@ -36,18 +36,6 @@
     "totalAmount": {
       "type": "float"
     },
-    "shipping_address": {
-      "type": "relation",
-      "relation": "manyToOne",
-      "target": "api::shipping-address.shipping-address",
-      "inversedBy": "orders"
-    },
-    "billing_address": {
-      "type": "relation",
-      "relation": "manyToOne",
-      "target": "api::billing-address.billing-address",
-      "inversedBy": "orders"
-    },
     "shipmentId": {
       "type": "string"
     },
@@ -98,6 +86,12 @@
     },
     "checkoutSessionId": {
       "type": "uid"
+    },
+    "billingAddress": {
+      "type": "json"
+    },
+    "shipppingAddress": {
+      "type": "json"
     }
   }
 }

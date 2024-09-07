@@ -65,9 +65,6 @@
       "inversedBy": "users",
       "configurable": false
     },
-    "photoUrl": {
-      "type": "string"
-    },
     "orders": {
       "type": "relation",
       "relation": "oneToMany",
@@ -97,6 +94,16 @@
       "relation": "oneToOne",
       "target": "api::wishlist.wishlist",
       "mappedBy": "users_permissions_user"
+    },
+    "profilePhoto": {
+      "allowedTypes": [
+        "images",
+        "files",
+        "videos",
+        "audios"
+      ],
+      "type": "media",
+      "multiple": true
     }
   }
 }

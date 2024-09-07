@@ -50,12 +50,6 @@
       "type": "string",
       "required": true
     },
-    "orders": {
-      "type": "relation",
-      "relation": "oneToMany",
-      "target": "api::order.order",
-      "mappedBy": "billing_address"
-    },
     "user": {
       "type": "relation",
       "relation": "manyToOne",
