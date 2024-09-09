@@ -799,6 +799,8 @@ export interface PluginUsersPermissionsUser extends Schema.CollectionType {
       'images' | 'files' | 'videos' | 'audios',
       true
     >;
+    firstName: Attribute.String & Attribute.Required;
+    lastName: Attribute.String & Attribute.Required;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     createdBy: Attribute.Relation<
