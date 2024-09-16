@@ -9,7 +9,7 @@ const { createCoreController } = require('@strapi/strapi').factories;
 module.exports = createCoreController('api::checkout.checkout', ({ strapi }) => ({
     async initializeCheckout(ctx) {
         try {
-
+            console.log(ctx.request.body)
             const checkoutSessionIdCookie = ctx.cookies.get('checkout_session_id') || null;
 
             // Step 2: Validate and Reserve Stock
