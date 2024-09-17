@@ -15,7 +15,9 @@ const { createCoreController } = require('@strapi/strapi').factories;
 // @ts-ignore
 module.exports = createCoreController("api::order.order", ({ strapi }) => ({
     async create(ctx) {
-        const { items, shippingInfo, billingInfo, totalAmount, customerEmail } = ctx.request.body;
+        const { items, shippingInfo, billingInfo, totalAmount } = ctx.request.body;
+        console.log('billingInfo', billingInfo);
+        console.log('shippingInfo', shippingInfo);
 
 
         const user = ctx.state.user;
@@ -39,9 +41,11 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
             populate: { stock_reservation_items: true },
         })
 
-        console.log('checkoutSession', checkoutSession);
+        // console.log('checkoutSession', checkoutSession);
 
-        if (checkoutSession.stripePaymentIntentId) {
+
+
+        if (checkoutSession && checkoutSession.stripePaymentIntentId) {
             const retrievedaymentIntent = await stripe.paymentIntents.retrieve(checkoutSession.stripePaymentIntentId);
             console.log('retrievedaymentIntent retrieved', retrievedaymentIntent)
 
@@ -54,6 +58,7 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
             }
             return;
         }
+
 
 
         try {
@@ -84,44 +89,75 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
 
 
 
+            const foundOrder = await strapi.db.query('api::order.order').findOne({
+                where: {
+                    checkoutSessionId: checkoutSession?.checkoutSessionId
+                }
+            })
+            console.log('foundOrder', foundOrder)
 
-            const createdOrder = await strapi.service('api::order.order').create({
-                data: {
-                    items: items.map((item) => {
-                        const { title, quantity, img, size } = item
-                        return ({
-                            title,
-                            quantity,
-                            img,
-                            size: size.size,
-                            price: productMap.get(item.productId).price,
-                            description: productMap.get(item.productId).desc,
-                        })
-                    }),
-                    checkoutSessionId: checkoutSessionIdCookie,
-                    shippingInfo,
-                    billingInfo,
-                    user: userId,
-                    customerEmail,
-                    currency: 'USD',
-                    // courierId: selectedCourierId,
-                    totalAmount,
-                    publishedAt: new Date()
-                },
-                populate: ['user']
-            });
+            let paymentIntent;
+            let orderId;
 
-            const paymentIntent = await stripe.paymentIntents.create({
+            if (foundOrder && !foundOrder?.stripePaymentIntentId) {
+                paymentIntent = await stripe.paymentIntents.create({
+                    currency: "usd",
+                    amount: totalAmount,
+                    automatic_payment_methods: { enabled: true },
+                    metadata: {
+                        checkoutSessionId: checkoutSession.id,
+                        orderId: foundOrder.id
+                    }
+                });
+                orderId = foundOrder.id
+            }
+            else {
+                const createdOrder = await strapi.service('api::order.order').create({
+                    data: {
+                        items: items.map((item) => {
+                            const { title, quantity, img, size, productId } = item
+                            return ({
+                                title,
+                                quantity,
+                                img,
+                                size: size.size,
+                                price: productMap.get(item.productId).price,
+                                description: productMap.get(item.productId).desc,
+                                productId: productId
+                            })
+                        }),
+                        checkoutSessionId: checkoutSessionIdCookie,
+                        shippingAddress: shippingInfo,
+                        // billingAddress: billingInfo,
+                        user: userId,
+                        customerEmail: shippingInfo?.email,
+                        currency: 'USD',
+                        // courierId: selectedCourierId,
+                        totalAmount,
+                        publishedAt: new Date()
+                    },
+                    populate: ['user']
+                });
+                orderId = createdOrder.id
+            }
+
+
+
+            paymentIntent = await stripe.paymentIntents.create({
                 currency: "usd",
                 amount: totalAmount,
                 automatic_payment_methods: { enabled: true },
                 metadata: {
                     checkoutSessionId: checkoutSession.id,
-                    orderId: createdOrder.id
+                    orderId
                 }
             });
 
             const updatedCheckoutSession = await strapi.entityService.update("api::checkout.checkout", checkoutSession.id, {
+                data: { stripePaymentIntentId: paymentIntent.id },
+            })
+
+            const updatedOrder = await strapi.entityService.update("api::order.order", orderId, {
                 data: { stripePaymentIntentId: paymentIntent.id },
             })
 
@@ -322,11 +358,10 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
                 updatedOrder = await strapi.entityService.update('api::order.order', paymentIntentMetaData?.orderId, {
                     data: {
                         status: 'paid',
-                        stripeSessionId: paymentIntent.id,
                     },
                 })
 
-                console.log('updatedOrder', updatedOrder)
+                // console.log('updatedOrder', updatedOrder)
 
                 if (!updatedOrder) {
                     console.error('Order not found')
@@ -338,8 +373,7 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
 
                 console.log('payment success');
 
-                // console.log('paymentIntent.id', paymentIntent.id)
-                // console.log('order', order)
+                console.log('paymentIntent', paymentIntent)
 
                 // Update order status to "paid"
                 // console.log('updatedOrder', updatedOrder)
@@ -399,11 +433,11 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
                 //             regulatory_identifiers: { eori: 'DE12345678912345', ioss: 'IM1234567890', vat_number: 'EU1234567890' },
                 //             shipping_settings: {
                 //                 additional_services: { qr_code: 'none' },
-                //                 buy_label: true,
-                //                 buy_label_synchronous: true,
+                //                 buy_label: false,
                 //                 printing_options: { commercial_invoice: 'A4', format: 'url', label: '4x6', packing_slip: '4x6' },
                 //                 units: { dimensions: 'in', weight: 'lb' }
                 //             },
+                //             metadata: { orderId: updatedOrder?.id },
                 //             parcels: [
                 //                 {
                 //                     items: updatedOrder.items.map(item => ({
@@ -428,7 +462,7 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
                 //     // Create Shipment
                 //     const easyshipResponse = await axios.request(options);
                 //     const shipment = easyshipResponse.data.shipment
-                //     // console.log(shipment)
+                //     console.log('shipment', shipment)
 
                 //     if (shipment) {
                 //         await strapi.db.query('api::order.order').update({
@@ -436,7 +470,6 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
                 //             data: {
                 //                 shipmentId: shipment.easyship_shipment_id,
                 //                 trackingPageUrl: shipment.tracking_page_url,
-                //                 trackingNumber: shipment.trackings[0].tracking_number,
                 //                 shippingDocuments: shipment.shipping_documents,
                 //                 shipmentStatus: shipment.shipment_state,
                 //                 courierName: shipment.courier.name,
@@ -453,7 +486,7 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
 
                 //     if (easyshipResponse.status !== 200) {
                 //         // console.log(easyshipResponse)
-                //         throw new Error(`Easyship API request failed with status ${easyshipResponse.status}`);
+                //         throw new Error(`Easyship API request failed with status ${easyshipResponse.status}: ${easyshipResponse.statusText}`);
                 //     }
                 //     // console.log('Easyship shipment created:', easyshipResponse.data);
 
@@ -503,6 +536,88 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
         }
 
         ctx.send({ received: true });
-    }
+    },
+
+    async handleEasyshipWebhook(ctx) {
+        console.log(ctx.request.body)
+        try {
+            const webhookData = ctx.request.body; // This contains the webhook payload
+
+            // Extract relevant data from the webhook
+            const { event_type, resource_id, metadata } = webhookData;
+
+
+            let updatedOrder
+            switch (event_type) {
+                case 'shipment.cancelled': {
+                    // Remember to update this line
+                    const orderItem = await strapi.db.query("api::order.order").findOne({
+                        where: {
+                            shipmentId: resource_id
+                        },
+                    })
+
+                    console.log('orderItem', orderItem)
+                    if (orderItem.status === 'shipped') {
+                        console.log('Order is already shipped');
+                        return ctx.badRequest('Order has already been shipped, you can initiate refund once it has been delivered')
+                    }
+                    else if (orderItem.status === 'cancelled') {
+                        console.log('Order has already been cancelled');
+                        return ctx.badRequest('Order has already been canclled')
+                    }
+                    else if (orderItem.status === 'delivered') {
+                        console.log('Order has already been delivered');
+                        return ctx.badRequest('Order has already been delivered, initiate refund instead')
+                    }
+                    else {
+                        updatedOrder = await strapi.db.query("api::order.order").update({
+                            where: {
+                                shipmentId: resource_id
+                            },
+                            data: {
+                                shipmentStatus: 'cancelled'
+                            }
+                        })
+                        if (updatedOrder) {
+                            const refund = await stripe.refunds.create({
+                                payment_intent: updatedOrder?.stripePaymentIntentId,
+                            });
+                        }
+                    }
+                }
+            }
+
+            ctx.send({ message: 'Order updated successfully based on webhook' });
+
+            // Ensure it's the event we are expecting
+            // if (event_type === "shipment.tracking.status.changed") {
+            //     const { easyship_shipment_id, status, tracking_number, tracking_page_url } = tracking_status;
+
+            //     // Update the corresponding order based on the easyship_shipment_id
+            //     const updatedOrder = await strapi.db.query('api::order.order').update({
+            //         where: { shipmentId: easyship_shipment_id },
+            //         data: {
+            //             shipmentStatus: status, // Update with the new status like 'Delivered', 'In Transit', etc.
+            //             trackingNumber: tracking_number,
+            //             trackingPageUrl: tracking_page_url,
+            //         },
+            //     });
+
+            //     // Check if the order was found and updated
+            //     if (!updatedOrder) {
+            //         ctx.throw(404, `Order not found for Easyship Shipment ID: ${easyship_shipment_id}`);
+            //     }
+            //     ctx.status = 200
+            //     // Respond with success message
+            //     ctx.send({ message: 'Order updated successfully based on webhook' });
+            // } else {
+            //     ctx.throw(400, 'Invalid event type');
+            // }
+        } catch (error) {
+            console.error('Error handling Easyship webhook:', error);
+            ctx.throw(500, 'Failed to process webhook');
+        }
+    },
 }));
 

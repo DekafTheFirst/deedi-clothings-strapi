@@ -12,11 +12,12 @@
   },
   "pluginOptions": {},
   "attributes": {
-    "stripeSessionId": {
+    "stripePaymentIntentId": {
       "type": "string"
     },
     "items": {
-      "type": "json"
+      "type": "json",
+      "required": true
     },
     "courierId": {
       "type": "string"
@@ -31,7 +32,8 @@
         "cancelled",
         "checkout_session_expired"
       ],
-      "default": "pending"
+      "default": "pending",
+      "required": true
     },
     "totalAmount": {
       "type": "float"
@@ -52,7 +54,9 @@
       "type": "decimal"
     },
     "currency": {
-      "type": "string"
+      "type": "string",
+      "required": true,
+      "default": "USD"
     },
     "shippingLabelUrl": {
       "type": "string"
@@ -69,9 +73,6 @@
     "labelPaidAt": {
       "type": "datetime"
     },
-    "trackingNumber": {
-      "type": "string"
-    },
     "shippingDocuments": {
       "type": "json"
     },
@@ -82,16 +83,15 @@
       "inversedBy": "orders"
     },
     "customerEmail": {
-      "type": "email"
+      "type": "email",
+      "required": true
     },
     "checkoutSessionId": {
       "type": "uid"
     },
-    "billingAddress": {
-      "type": "json"
-    },
-    "shipppingAddress": {
-      "type": "json"
+    "shippingAddress": {
+      "type": "json",
+      "required": true
     }
   }
 }

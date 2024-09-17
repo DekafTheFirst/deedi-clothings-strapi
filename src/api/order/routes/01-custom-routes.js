@@ -5,7 +5,6 @@ module.exports = {
             path: '/orders/couriers',
             handler: 'order.getCouriers',
             config: {
-                auth: false,
             },
         },
         {
@@ -13,12 +12,20 @@ module.exports = {
             path: '/orders/webhook',
             handler: 'order.handleStripeWebhook',
             config: {
-                auth: false,  // This makes the endpoint unauthenticated
                 policies: [],
                 middlewares: [],
             },
         },
         
+        {
+            method: 'POST',
+            path: '/orders/easyship-webhook',
+            handler: 'order.handleEasyshipWebhook',
+            config: {
+                policies: [],
+                middlewares: [],
+            },
+        },
 
 
     ],

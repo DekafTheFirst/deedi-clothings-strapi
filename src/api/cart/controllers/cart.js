@@ -256,7 +256,7 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
       const failedResults = results.filter((result) => result.status === 'failed');
       const reducedResults = existingItemsStockCheck.filter((result) => result.status === 'reduced');
       const outOfStockResults = existingItemsStockCheck.filter((result) => result.status === 'out-of-stock');
-
+      console.log('results', results)
       // console.log('reducedResults', reducedResults)
       const mergedCart = await strapi.entityService.findOne('api::cart.cart', cartId, {
         populate: ['items', 'items.size', 'items.product', 'items.product.images'],
@@ -547,9 +547,10 @@ module.exports = createCoreController('api::cart.cart', ({ strapi }) => ({
       }
 
       if (userIsAuthenticated) {
-        await strapi.entityService.update('api::cart-item.cart-item', existingStrapiCartItem.id, {
-          data: { quantity: availableStock },
+        const updatedCartItem = await strapi.entityService.update('api::cart-item.cart-item', existingStrapiCartItem.id, {
+          data: { quantity: requestedQuantity },
         });
+        console.log('updatedCartItem', updatedCartItem); 
       }
 
       return ctx.send({

@@ -1046,8 +1046,8 @@ export interface ApiOrderOrder extends Schema.CollectionType {
     draftAndPublish: true;
   };
   attributes: {
-    stripeSessionId: Attribute.String;
-    items: Attribute.JSON;
+    stripePaymentIntentId: Attribute.String;
+    items: Attribute.JSON & Attribute.Required;
     courierId: Attribute.String;
     status: Attribute.Enumeration<
       [
@@ -1059,6 +1059,7 @@ export interface ApiOrderOrder extends Schema.CollectionType {
         'checkout_session_expired'
       ]
     > &
+      Attribute.Required &
       Attribute.DefaultTo<'pending'>;
     totalAmount: Attribute.Float;
     shipmentId: Attribute.String;
@@ -1066,23 +1067,23 @@ export interface ApiOrderOrder extends Schema.CollectionType {
     shipmentStatus: Attribute.String;
     courierName: Attribute.String;
     shippingCost: Attribute.Decimal;
-    currency: Attribute.String;
+    currency: Attribute.String &
+      Attribute.Required &
+      Attribute.DefaultTo<'USD'>;
     shippingLabelUrl: Attribute.String;
     minDeliveryTime: Attribute.Integer;
     maxDeliveryTime: Attribute.Integer;
     labelGeneratedAt: Attribute.DateTime;
     labelPaidAt: Attribute.DateTime;
-    trackingNumber: Attribute.String;
     shippingDocuments: Attribute.JSON;
     user: Attribute.Relation<
       'api::order.order',
       'manyToOne',
       'plugin::users-permissions.user'
     >;
-    customerEmail: Attribute.Email;
+    customerEmail: Attribute.Email & Attribute.Required;
     checkoutSessionId: Attribute.UID;
-    billingAddress: Attribute.JSON;
-    shipppingAddress: Attribute.JSON;
+    shippingAddress: Attribute.JSON & Attribute.Required;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;
