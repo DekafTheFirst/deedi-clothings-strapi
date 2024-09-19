@@ -1016,6 +1016,7 @@ export interface ApiCheckoutCheckout extends Schema.CollectionType {
     expired: Attribute.Boolean;
     stripePaymentIntentId: Attribute.String;
     checkoutSessionId: Attribute.String;
+    shippingRates: Attribute.JSON;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;
@@ -1052,19 +1053,22 @@ export interface ApiOrderOrder extends Schema.CollectionType {
     status: Attribute.Enumeration<
       [
         'pending',
-        'paid',
+        'processing',
         'shipped',
+        'in_transit',
+        'out_for_delivery',
         'delivered',
+        'exception',
         'cancelled',
-        'checkout_session_expired'
+        'unknown'
       ]
     > &
       Attribute.Required &
       Attribute.DefaultTo<'pending'>;
     totalAmount: Attribute.Float;
-    shipmentId: Attribute.String;
+    shipmentId: Attribute.String & Attribute.Unique;
     trackingPageUrl: Attribute.String;
-    shipmentStatus: Attribute.String;
+    statusMessage: Attribute.String;
     courierName: Attribute.String;
     shippingCost: Attribute.Decimal;
     currency: Attribute.String &
@@ -1081,7 +1085,7 @@ export interface ApiOrderOrder extends Schema.CollectionType {
       'manyToOne',
       'plugin::users-permissions.user'
     >;
-    customerEmail: Attribute.Email & Attribute.Required;
+    customerEmail: Attribute.Email;
     checkoutSessionId: Attribute.UID;
     shippingAddress: Attribute.JSON & Attribute.Required;
     createdAt: Attribute.DateTime;
@@ -1140,6 +1144,7 @@ export interface ApiProductProduct extends Schema.CollectionType {
       'oneToMany',
       'api::stock.stock'
     >;
+    stripeTaxCode: Attribute.String;
     createdAt: Attribute.DateTime;
     updatedAt: Attribute.DateTime;
     publishedAt: Attribute.DateTime;

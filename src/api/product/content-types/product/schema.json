@@ -78,6 +78,9 @@
       "relation": "oneToMany",
       "target": "api::stock.stock",
       "mappedBy": "product"
+    },
+    "stripeTaxCode": {
+      "type": "string"
     }
   }
 }

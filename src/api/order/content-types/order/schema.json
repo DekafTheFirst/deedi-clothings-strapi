@@ -26,11 +26,14 @@
       "type": "enumeration",
       "enum": [
         "pending",
-        "paid",
+        "processing",
         "shipped",
+        "in_transit",
+        "out_for_delivery",
         "delivered",
+        "exception",
         "cancelled",
-        "checkout_session_expired"
+        "unknown"
       ],
       "default": "pending",
       "required": true
@@ -39,12 +42,13 @@
       "type": "float"
     },
     "shipmentId": {
-      "type": "string"
+      "type": "string",
+      "unique": true
     },
     "trackingPageUrl": {
       "type": "string"
     },
-    "shipmentStatus": {
+    "statusMessage": {
       "type": "string"
     },
     "courierName": {
@@ -84,7 +88,7 @@
     },
     "customerEmail": {
       "type": "email",
-      "required": true
+      "required": false
     },
     "checkoutSessionId": {
       "type": "uid"

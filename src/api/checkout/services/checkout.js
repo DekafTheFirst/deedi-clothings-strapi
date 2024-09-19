@@ -6,6 +6,7 @@
 
 const { createCoreService } = require('@strapi/strapi').factories;
 const crypto = require('crypto');
+const stripe = require("stripe")(process.env.STRIPE_KEY);
 
 function generateSessionId(userId = null) {
     // console.log('userId', userId)
@@ -95,7 +96,21 @@ module.exports = createCoreService('api::checkout.checkout', ({ strapi }) => ({
         return checkoutSession;
     },
 
+    async calculateTax({ lineItems, shippingInfo, shippingCost }) {
+        const calculation = await stripe.tax.calculations.create({
+            currency: 'usd',
+            line_items: lineItems,
+            shipping_cost: { 
+                amount: shippingCost 
+            },
+            customer_details: {
+                address: shippingInfo.address,
+                address_source: 'shipping',
+            },
+        });
 
+        return calculation
+    },
 
     async endCheckoutSession({ checkoutSessionId, userId }) {
 

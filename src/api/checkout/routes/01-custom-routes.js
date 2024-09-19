@@ -11,8 +11,8 @@ module.exports = {
         },
         {
             method: 'POST',
-            path: '/checkout/verify-checkout',
-            handler: 'checkout.verifyCheckout',
+            path: '/checkout/create-payment-intent',
+            handler: 'checkout.createPaymentIntent',
             config: {
                 policies: [],
                 middlewares: [],
