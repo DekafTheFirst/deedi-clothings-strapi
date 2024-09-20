@@ -33,7 +33,7 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           script: |
-            cd /var/www/strapi
+            cd ~/strapi
             git pull origin main
             npm install --only=prod
             npm run build
