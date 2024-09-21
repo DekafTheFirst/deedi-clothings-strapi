@@ -20,7 +20,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          yarn install --frozen-lockfile
+          yarn install
 
       - name: Build Strapi
         run: yarn build
