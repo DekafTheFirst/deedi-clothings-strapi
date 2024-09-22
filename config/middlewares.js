@@ -1,7 +1,16 @@
 module.exports = [
   'strapi::logger',
   'strapi::errors',
-  'strapi::security',
+  {
+    name: 'strapi::security',
+    config: {
+      contentSecurityPolicy: {
+        directives: {
+          'connect-src': ["'self'", 'https:', 'http:', 'ws:', 'wss:'],
+        },
+      },
+    },
+  },
   {
     name: 'strapi::cors',
     config: {
