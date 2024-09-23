@@ -14,8 +14,6 @@ module.exports = [
   {
     name: 'strapi::cors',
     config: {
-      enabled: true,
-      origin: ['https://api.deedis.com', 'https://deedis.com'],      
       headers: ['Content-Type', 'Authorization', 'X-Requested-With'], // List the headers you need
       credentials: true, // Allow cookies to be sent and received
     },
