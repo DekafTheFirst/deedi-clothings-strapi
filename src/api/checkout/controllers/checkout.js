@@ -16,6 +16,7 @@ module.exports = createCoreController('api::checkout.checkout', ({ strapi }) => 
         try {
             console.log(ctx.request.body)
             const checkoutSessionIdCookie = ctx.cookies.get('checkout_session_id') || null;
+            console.log(ctx.request.headers); // Log headers to check for X-Forwarded-Proto
 
             // Step 2: Validate and Reserve Stock
             if (checkoutSessionIdCookie) {
