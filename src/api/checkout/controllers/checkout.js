@@ -79,7 +79,7 @@ module.exports = createCoreController('api::checkout.checkout', ({ strapi }) => 
                 ctx.cookies.set('checkout_session_id', checkoutSession.checkoutSessionId, {
                     httpOnly: true, // Set to false to see it in Application tab
                     secure: process.env.NODE_ENV === 'production', // Ensure the cookie is only sent over HTTPS in production
-                    sameSite: 'None', // Allows cross-site requests (important for frontend/backend communication)
+                    sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'lax', // Allows cross-site requests (important for frontend/backend communication)
                     expires: checkoutSessionExpiresAt,
                     // 15 minutes in milliseconds
                 });
