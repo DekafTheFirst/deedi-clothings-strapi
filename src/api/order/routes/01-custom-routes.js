@@ -9,7 +9,7 @@ module.exports = {
         },
         {
             method: 'POST',
-            path: '/orders/webhook',
+            path: '/orders/stripe-webhook',
             handler: 'order.handleStripeWebhook',
             config: {
                 policies: [],
