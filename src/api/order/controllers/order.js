@@ -170,7 +170,8 @@ module.exports = createCoreController("api::order.order", ({ strapi }) => ({
 
     async handleStripeWebhook(ctx) {
         const sig = ctx?.request.headers['stripe-signature'];
-        const endpointSecret = "whsec_8ae6fbe7f7642ac26851cdf79de27ce529aa0f40d1f78f4f31fc2746deac90cd";
+        const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+        console.log('endpointSecret', endpointSecret )
 
         let event;
 
